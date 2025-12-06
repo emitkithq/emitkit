@@ -4,7 +4,7 @@
 	import { Label } from '$lib/components/ui/label';
 	import { Badge } from '$lib/components/ui/badge';
 	import * as Select from '$lib/components/ui/select';
-	import type { TriggerConfig } from '$lib/features/workflows/types';
+	import type { TriggerConfig, TriggerType } from '$lib/features/workflows/types';
 	import XIcon from '@lucide/svelte/icons/x';
 
 	interface Props {
@@ -17,7 +17,7 @@
 	let { config, onUpdate, channels = [], folders = [] }: Props = $props();
 
 	// Map trigger types to labels
-	const triggerTypeLabels: Record<TriggerConfig['triggerType'], string> = {
+	const triggerTypeLabels: Record<TriggerType, string> = {
 		folder: 'Folder Event',
 		channel: 'Channel Event',
 		event_type: 'Event Type',
@@ -49,7 +49,7 @@
 		{ value: 'published', label: 'Event Published' }
 	];
 
-	let selectedEventTypes = $state<string[]>(config.eventTypes || []);
+	let selectedEventTypes = $derived<string[]>(config.eventTypes || []);
 
 	function toggleEventType(eventType: string) {
 		const current = selectedEventTypes || [];
@@ -67,9 +67,9 @@
 	<ConfigField
 		label="Trigger Type"
 		type="select"
-		value={config.triggerType}
+		value={config.triggerType ?? ''}
 		onchange={(value) => {
-			const newTriggerType = value as TriggerConfig['triggerType'];
+			const newTriggerType = value as TriggerType;
 			onUpdate(
 				{
 					triggerType: newTriggerType,
@@ -149,9 +149,7 @@
 	{#if config.triggerType === 'tag'}
 		<div class="space-y-2">
 			<Label class="text-sm font-medium">Tags</Label>
-			<p class="text-xs text-muted-foreground">
-				Trigger when events have any of these tags
-			</p>
+			<p class="text-xs text-muted-foreground">Trigger when events have any of these tags</p>
 
 			<!-- Tag input -->
 			<div class="flex gap-2">

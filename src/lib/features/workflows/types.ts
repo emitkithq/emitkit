@@ -6,7 +6,9 @@ import type {
 	WorkflowNodeData,
 	WorkflowEdgeData,
 	TriggerConfig,
-	ActionConfig
+	ActionConfig,
+	TriggerType,
+	ActionType
 } from '$lib/server/db/schema/workflow';
 
 // Re-export database types
@@ -18,7 +20,9 @@ export type {
 	WorkflowNodeData,
 	WorkflowEdgeData,
 	TriggerConfig,
-	ActionConfig
+	ActionConfig,
+	TriggerType,
+	ActionType
 };
 
 // Client-side workflow node type (compatible with Svelte Flow / XYFlow)

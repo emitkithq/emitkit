@@ -123,7 +123,7 @@ export type TriggerType = 'folder' | 'channel' | 'event_type' | 'tag';
 export type ActionType = 'slack' | 'discord' | 'email' | 'http' | 'condition';
 
 export type TriggerConfig = {
-	triggerType: TriggerType;
+	triggerType?: TriggerType | null;
 	folderId?: string;
 	channelId?: string;
 	eventTypes?: string[];
@@ -131,7 +131,7 @@ export type TriggerConfig = {
 };
 
 export type ActionConfig = {
-	actionType?: ActionType;
+	actionType?: ActionType | null;
 	// Slack/Discord
 	webhookUrl?: string;
 	messageTemplate?: string;

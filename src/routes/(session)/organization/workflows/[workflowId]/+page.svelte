@@ -27,6 +27,7 @@
 	import WorkflowRuns from '$lib/features/workflows/components/workflow-runs.svelte';
 	import ActionGrid from '$lib/features/workflows/components/config/action-grid.svelte';
 	import type { ActionTemplate } from '$lib/features/workflows/action-templates';
+	import WorkflowDebugPanel from '$lib/features/workflows/components/workflow-debug-panel.svelte';
 
 	let { data }: { data: PageData } = $props();
 
@@ -358,4 +359,7 @@
 			</div>
 		{/if}
 	</div>
+
+	<!-- Debug Panel (dev mode only) -->
+	<WorkflowDebugPanel {data} />
 </div>

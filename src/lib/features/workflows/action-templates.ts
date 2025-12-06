@@ -36,15 +36,15 @@ export const actionTemplates: ActionTemplate[] = [
 		type: 'action',
 		category: 'communication',
 		name: 'Send to Slack',
-		description: 'Post a message to a Slack channel',
+		description: 'Post a message to a Slack channel using a stored integration',
 		serviceUrl: 'https://slack.com',
 		iconUrl: getFaviconUrl('https://slack.com', 32),
 		config: {
 			actionType: 'slack',
-			webhookUrl: '',
-			messageTemplate: '{{event.title}}\n\n{{event.description}}'
+			integrationId: '', // User selects from stored integrations
+			messageTemplate: '{{trigger.eventTitle}}\n\n{{trigger.eventDescription}}'
 		},
-		requiredFields: ['webhookUrl', 'messageTemplate']
+		requiredFields: ['integrationId', 'messageTemplate']
 	},
 	{
 		id: 'discord-message',

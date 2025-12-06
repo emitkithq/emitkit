@@ -23,7 +23,7 @@ class WorkflowStore {
 	});
 
 	private saveTimeout: ReturnType<typeof setTimeout> | null = null;
-	private readonly AUTOSAVE_DELAY = 2000;
+	private readonly AUTOSAVE_DELAY = 750;
 
 	// Getters using $derived for reactivity
 	get nodes() {

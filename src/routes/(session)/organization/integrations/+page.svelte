@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { page } from '$app/stores';
+	import { page } from '$app/state';
 	import {
 		listIntegrationsQuery,
 		createIntegrationCommand,
@@ -28,7 +28,7 @@
 	let searchQuery = $state('');
 	let testingIntegrationId = $state<string | null>(null);
 
-	const organizationId = $derived($page.data.user?.activeOrganizationId || '');
+	const organizationId = $derived(page.data.orgId || '');
 
 	// Query integrations
 	const integrationsQuery = $derived(listIntegrationsQuery({ scope: undefined }));
@@ -43,10 +43,7 @@
 
 	// Create lookup maps for folder/channel names
 	const folderMap = $derived.by(() => {
-		if (
-			!foldersQuery ||
-			(typeof foldersQuery === 'object' && 'then' in foldersQuery)
-		) {
+		if (!foldersQuery || (typeof foldersQuery === 'object' && 'then' in foldersQuery)) {
 			return new Map<string, string>();
 		}
 		const folders = (foldersQuery as any).items || [];
@@ -54,10 +51,7 @@
 	});
 
 	const channelMap = $derived.by(() => {
-		if (
-			!channelsQuery ||
-			(typeof channelsQuery === 'object' && 'then' in channelsQuery)
-		) {
+		if (!channelsQuery || (typeof channelsQuery === 'object' && 'then' in channelsQuery)) {
 			return new Map<string, string>();
 		}
 		const channels = (channelsQuery as any).items || [];
@@ -214,8 +208,12 @@
 				<h2 class="mb-4 text-xl font-semibold">Connected Integrations</h2>
 				<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
 					{#each integrationsWithMetadata as integration (integration.id)}
-						{@const folderName = integration.folderId ? folderMap.get(integration.folderId) : undefined}
-						{@const channelName = integration.channelId ? channelMap.get(integration.channelId) : undefined}
+						{@const folderName = integration.folderId
+							? folderMap.get(integration.folderId)
+							: undefined}
+						{@const channelName = integration.channelId
+							? channelMap.get(integration.channelId)
+							: undefined}
 						<ConnectionCard
 							{integration}
 							{folderName}

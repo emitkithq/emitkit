@@ -3,6 +3,10 @@ import { z } from 'zod';
 // Trigger configuration schemas
 // Note: Fields allow empty strings/arrays during editing, validation happens at execution time
 export const triggerConfigSchema = z.union([
+	// Uninitialized trigger (no trigger type selected yet)
+	z.object({
+		triggerType: z.union([z.null(), z.undefined()]).optional()
+	}),
 	z.object({
 		triggerType: z.literal('folder'),
 		folderId: z.string().optional(),
@@ -29,10 +33,15 @@ export const triggerConfigSchema = z.union([
 // Action configuration schemas
 // Note: Fields allow empty strings during editing, validation happens at execution time
 export const actionConfigSchema = z.union([
-	// Slack
+	// Uninitialized action (no action type selected yet)
+	z.object({
+		actionType: z.union([z.null(), z.undefined()]).optional()
+	}),
+	// Slack - supports both integration reference (new) and webhook URL (legacy)
 	z.object({
 		actionType: z.literal('slack'),
-		webhookUrl: z.union([z.string().url(), z.literal('')]).optional(),
+		integrationId: z.string().optional(), // New: reference to stored integration
+		webhookUrl: z.union([z.string().url(), z.literal('')]).optional(), // Legacy: direct webhook
 		messageTemplate: z.string().optional()
 	}),
 	// Discord

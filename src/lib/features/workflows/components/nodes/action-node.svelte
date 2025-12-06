@@ -2,6 +2,7 @@
 	import { Handle, Position, type NodeProps } from '@xyflow/svelte';
 	import type { WorkflowNode } from '$lib/features/workflows/types';
 	import ZapIcon from '@lucide/svelte/icons/zap';
+	import AlertTriangleIcon from '@lucide/svelte/icons/alert-triangle';
 
 	interface Props extends NodeProps {
 		data: WorkflowNode['data'];
@@ -14,6 +15,14 @@
 		data?.config && 'actionType' in data.config ? data.config : { actionType: 'unknown' }
 	);
 
+	// Check if node is properly configured
+	const isConfigured = $derived(
+		data?.config &&
+		'actionType' in data.config &&
+		data.config.actionType !== undefined &&
+		data.config.actionType !== null
+	);
+
 	// Status color mapping
 	const statusColors = {
 		idle: 'bg-card border-border',
@@ -22,7 +31,11 @@
 		error: 'bg-red-100/20 border-red-400 dark:bg-red-900/20'
 	};
 
-	const statusColor = $derived(statusColors[data?.status ?? 'idle']);
+	const statusColor = $derived(
+		!isConfigured
+			? 'bg-yellow-50/50 border-yellow-400 dark:bg-yellow-900/10'
+			: statusColors[data?.status ?? 'idle']
+	);
 
 	// Action type icon/color mapping
 	const actionStyles = {
@@ -62,14 +75,26 @@
 		{/if}
 	</div>
 
+	<!-- Warning for unconfigured node -->
+	{#if !isConfigured}
+		<div class="mb-2 flex items-center gap-2 rounded-md bg-yellow-100 px-2 py-1.5 dark:bg-yellow-900/30">
+			<AlertTriangleIcon class="h-3.5 w-3.5 text-yellow-600 dark:text-yellow-400" />
+			<span class="text-xs font-medium text-yellow-700 dark:text-yellow-300">
+				Not configured
+			</span>
+		</div>
+	{/if}
+
 	<!-- Action Type Badge -->
-	<div class="mt-2">
-		<span
-			class="inline-flex items-center rounded-full px-2 py-1 text-xs {actionStyle.bg} {actionStyle.text}"
-		>
-			{actionConfig.actionType}
-		</span>
-	</div>
+	{#if isConfigured}
+		<div class="mt-2">
+			<span
+				class="inline-flex items-center rounded-full px-2 py-1 text-xs {actionStyle.bg} {actionStyle.text}"
+			>
+				{actionConfig.actionType}
+			</span>
+		</div>
+	{/if}
 
 	<!-- Input Handle (only target) -->
 	<Handle

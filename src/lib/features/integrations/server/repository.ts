@@ -127,6 +127,14 @@ export async function getIntegration(id: string, orgId: string): Promise<Integra
 	return integration ?? null;
 }
 
+export async function getIntegrationById(id: string): Promise<Integration | null> {
+	const integration = await db.query.integration.findFirst({
+		where: eq(schema.integration.id, id)
+	});
+
+	return integration ?? null;
+}
+
 export async function updateIntegration(
 	id: string,
 	updates: Partial<Omit<Integration, 'id' | 'channelId' | 'organizationId' | 'createdAt'>>

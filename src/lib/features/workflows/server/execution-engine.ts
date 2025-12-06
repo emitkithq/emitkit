@@ -30,6 +30,32 @@ type NodeExecutionLog = {
 };
 
 /**
+ * Validate workflow configuration before execution
+ */
+function validateWorkflowConfiguration(nodes: WorkflowNodeData[]): { valid: boolean; errors: string[] } {
+	const errors: string[] = [];
+
+	for (const node of nodes) {
+		if (node.type === 'trigger') {
+			const config = node.data.config;
+			if (!('triggerType' in config) || !config.triggerType) {
+				errors.push(`Trigger node "${node.data.label}" (${node.id}) is missing trigger type`);
+			}
+		} else if (node.type === 'action') {
+			const config = node.data.config;
+			if (!('actionType' in config) || !config.actionType) {
+				errors.push(`Action node "${node.data.label}" (${node.id}) is not configured - please select an action type`);
+			}
+		}
+	}
+
+	return {
+		valid: errors.length === 0,
+		errors
+	};
+}
+
+/**
  * Execute a workflow with the given trigger event
  * Uses database transaction to ensure data integrity
  */
@@ -76,6 +102,12 @@ export async function executeWorkflow(
 			operation.step('Building execution graph');
 			const nodes = workflow.nodes as unknown as WorkflowNodeData[];
 			const edges = workflow.edges as unknown as WorkflowEdgeData[];
+
+			// Validate workflow configuration
+			const validation = validateWorkflowConfiguration(nodes);
+			if (!validation.valid) {
+				throw new Error(`Workflow configuration invalid:\n${validation.errors.join('\n')}`);
+			}
 
 			// Find trigger nodes (starting points)
 			const triggerNodes = nodes.filter((n) => n.type === 'trigger');
@@ -195,7 +227,10 @@ async function executeActionNode(
 	const actionType = 'actionType' in config ? config.actionType : null;
 
 	if (!actionType) {
-		throw new Error(`No action type specified for node ${node.id}`);
+		throw new Error(
+			`Action node "${node.data.label}" (${node.id}) is not configured. ` +
+			`Please select an action type from the configuration panel.`
+		);
 	}
 
 	switch (actionType) {
@@ -227,19 +262,35 @@ export async function executeSlackActionNode(
 	context: ExecutionContext
 ): Promise<{ sent: boolean }> {
 	const config = node.data.config;
-	if (!('webhookUrl' in config) || !config.webhookUrl) {
-		throw new Error('Slack webhook URL not configured');
-	}
+	const integrationId = 'integrationId' in config ? config.integrationId : null;
+	const webhookUrl = 'webhookUrl' in config ? config.webhookUrl : null;
 
 	const messageTemplate = 'messageTemplate' in config ? config.messageTemplate : '';
 	const message = interpolateTemplate(messageTemplate as string, context);
 
-	// Send to Slack webhook
-	const webhookUrl = config.webhookUrl as string;
-	const response = await fetch(webhookUrl, {
-		method: 'POST',
-		headers: { 'Content-Type': 'application/json' },
-		body: JSON.stringify({
+	// New flow: Use stored integration
+	if (integrationId) {
+		const { getIntegrationById } = await import('$lib/features/integrations/server/repository');
+		const integration = await getIntegrationById(integrationId as string);
+
+		if (!integration) {
+			throw new Error(`Slack integration not found: ${integrationId}`);
+		}
+
+		if (!integration.enabled) {
+			throw new Error(`Slack integration is disabled: ${integrationId}`);
+		}
+
+		const botToken = integration.config.botToken as string | undefined;
+		const slackChannelId = integration.config.slackChannelId as string | undefined;
+
+		if (!botToken || !slackChannelId) {
+			throw new Error('Slack integration missing bot token or channel ID');
+		}
+
+		// Use Slack API to post message
+		const { postMessage } = await import('$lib/features/integrations/server/slack-api');
+		const result = await postMessage(botToken, slackChannelId, {
 			text: message,
 			blocks: [
 				{
@@ -250,15 +301,47 @@ export async function executeSlackActionNode(
 					}
 				}
 			]
-		}),
-		signal: AbortSignal.timeout(10000)
-	});
+		});
 
-	if (!response.ok) {
-		throw new Error(`Slack webhook failed: ${response.status}`);
+		if (!result.success) {
+			throw new Error(`Slack API error: ${result.error}`);
+		}
+
+		return { sent: true };
 	}
 
-	return { sent: true };
+	// Legacy flow: Use webhook URL
+	if (webhookUrl) {
+		logger.warn('Using deprecated webhook flow in workflow execution', {
+			nodeId: node.id
+		});
+
+		const response = await fetch(webhookUrl as string, {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({
+				text: message,
+				blocks: [
+					{
+						type: 'section',
+						text: {
+							type: 'mrkdwn',
+							text: message
+						}
+					}
+				]
+			}),
+			signal: AbortSignal.timeout(10000)
+		});
+
+		if (!response.ok) {
+			throw new Error(`Slack webhook failed: ${response.status}`);
+		}
+
+		return { sent: true };
+	}
+
+	throw new Error('Slack action not configured - missing integration or webhook URL');
 }
 
 /**

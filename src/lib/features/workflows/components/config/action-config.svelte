@@ -6,11 +6,15 @@
 	import { Label } from '$lib/components/ui/label';
 	import { Button } from '$lib/components/ui/button';
 	import { Textarea } from '$lib/components/ui/textarea';
+	import * as Select from '$lib/components/ui/select';
 	import type { ActionConfig } from '$lib/features/workflows/types';
 	import { actionTemplates, type ActionTemplate } from '$lib/features/workflows/action-templates';
+	import { listIntegrationsQuery } from '$lib/features/integrations/integrations.remote';
+	import { page } from '$app/stores';
 	import PlusIcon from '@lucide/svelte/icons/plus';
 	import TrashIcon from '@lucide/svelte/icons/trash-2';
 	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
+	import ExternalLinkIcon from '@lucide/svelte/icons/external-link';
 
 	interface Props {
 		config: ActionConfig;
@@ -18,6 +22,21 @@
 	}
 
 	let { config, onUpdate }: Props = $props();
+
+	// Fetch integrations for the current organization
+	const organizationId = $derived($page.data.user?.activeOrganizationId || '');
+	const integrationsQuery = $derived(
+		config.actionType === 'slack' ? listIntegrationsQuery({ scope: undefined }) : null
+	);
+
+	// Filter Slack integrations
+	const slackIntegrations = $derived.by(() => {
+		if (!integrationsQuery || typeof integrationsQuery === 'object' && 'then' in integrationsQuery) {
+			return [];
+		}
+		const integrations = (integrationsQuery as any).integrations || [];
+		return integrations.filter((i: any) => i.type === 'slack' && i.enabled);
+	});
 
 	function handleActionSelect(template: ActionTemplate) {
 		// Update config with template's default config and set label
@@ -118,22 +137,72 @@
 
 	<!-- Slack-specific config -->
 	{#if config.actionType === 'slack'}
-		<ConfigField
-			label="Slack Webhook URL"
-			type="url"
-			value={config.webhookUrl}
-			onchange={(value) => onUpdate({ webhookUrl: String(value) })}
-			placeholder="https://hooks.slack.com/services/..."
-			description="Your Slack incoming webhook URL"
-			required
-		/>
+		<div class="space-y-2">
+			<Label>Slack Integration *</Label>
+			{#if slackIntegrations.length > 0}
+				{@const selectedIntegration = slackIntegrations.find((i: any) => i.id === config.integrationId)}
+				<Select.Root
+					type="single"
+					value={config.integrationId}
+					onValueChange={(value) => onUpdate({ integrationId: value })}
+				>
+					<Select.Trigger>
+						{#if selectedIntegration}
+							{selectedIntegration.config.slackWorkspaceName || 'Slack'} -
+							{selectedIntegration.config.slackChannelName || 'Channel'}
+							{#if selectedIntegration.scope !== 'organization'}
+								<span class="text-muted-foreground text-xs">
+									({selectedIntegration.scope})
+								</span>
+							{/if}
+						{:else}
+							Select a Slack integration
+						{/if}
+					</Select.Trigger>
+					<Select.Content>
+						{#each slackIntegrations as integration (integration.id)}
+							<Select.Item value={integration.id}>
+								<div class="flex flex-col">
+									<div class="font-medium">
+										{integration.config.slackWorkspaceName || 'Slack'} -
+										{integration.config.slackChannelName || 'Channel'}
+									</div>
+									<div class="text-xs text-muted-foreground">
+										Scope: {integration.scope}
+									</div>
+								</div>
+							</Select.Item>
+						{/each}
+					</Select.Content>
+				</Select.Root>
+				<p class="text-sm text-muted-foreground">
+					Select which Slack integration to use for sending notifications
+				</p>
+			{:else}
+				<div class="rounded-md border border-dashed border-muted-foreground/25 p-4">
+					<p class="text-sm text-muted-foreground mb-2">
+						No Slack integrations configured yet.
+					</p>
+					<Button
+						type="button"
+						variant="outline"
+						size="sm"
+						onclick={() => window.open('/organization/integrations', '_blank')}
+					>
+						<ExternalLinkIcon class="mr-2 h-4 w-4" />
+						Configure Slack Integration
+					</Button>
+				</div>
+			{/if}
+		</div>
+
 		<ConfigField
 			label="Message Template"
 			type="textarea"
 			value={config.messageTemplate}
 			onchange={(value) => onUpdate({ messageTemplate: String(value) })}
-			placeholder="New event: {`{{event.title}}`}"
-			description="Use {`{{event.title}}`}, {`{{event.description}}`}, etc. for dynamic values"
+			placeholder="New event: {`{{trigger.eventTitle}}`}\n\n{`{{trigger.eventDescription}}`}"
+			description="Use {`{{trigger.eventTitle}}`}, {`{{trigger.eventDescription}}`}, etc. for dynamic values"
 		/>
 	{/if}
 
