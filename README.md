@@ -4,15 +4,13 @@ Open-source event streaming platform with real-time notifications, webhooks, and
 
 ## Features
 
-- **Real-time Event Streaming**: SSE-based live updates with Tinybird (ClickHouse) backend
-- **Multi-tenancy**: Organization → Project → Channel → Events hierarchy
 - **Push Notifications**: Web Push API with VAPID support for browser notifications
 - **Webhooks**: Reliable HTTP POST dispatching with HMAC signatures and retry logic
 - **Integrations**: Slack, Discord, and Email notifications out of the box
 - **Type-Safe API**: End-to-end TypeScript with Zod validation
-- **Production-Ready**: Durable side-effect execution with QStash
+- **Production-Ready**: Durable side-effect execution with Upstash Workflow
 - **Modern UI**: shadcn-svelte components with Tailwind CSS
-- **Self-Hostable**: Deploy to Vercel, any Node.js host, or Docker
+- **Self-Hostable**: Deploy to Vercel (more platforms coming soon)
 
 ## Tech Stack
 
