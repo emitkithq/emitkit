@@ -23,9 +23,15 @@
 
 	const manager = createNotificationManager();
 
-	// Initialize subscription state
-	let subscribedChannels = $state<Set<string>>(new Set(currentSubscription?.channelIds || []));
-	let subscribeToAll = $state((currentSubscription?.channelIds?.length || 0) === 0);
+	// Local state that syncs with currentSubscription prop
+	let subscribedChannels = $state<Set<string>>(new Set());
+	let subscribeToAll = $state(false);
+
+	// Sync local state when currentSubscription changes
+	$effect(() => {
+		subscribedChannels = new Set(currentSubscription?.channelIds || []);
+		subscribeToAll = (currentSubscription?.channelIds?.length || 0) === 0;
+	});
 
 	// Derive all channel IDs
 	const allChannelIds = $derived(projects.flatMap((project) => project.channels.map((c) => c.id)));

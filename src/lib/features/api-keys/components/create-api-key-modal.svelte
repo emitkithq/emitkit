@@ -191,9 +191,9 @@
 				</div>
 
 				<div class="space-y-2">
-					<label class="text-sm font-medium">Your API Key</label>
+					<label for="created-api-key" class="text-sm font-medium">Your API Key</label>
 					<div class="flex gap-2">
-						<Input value={createdKey.key} readonly class="font-mono text-sm" />
+						<Input id="created-api-key" value={createdKey.key} readonly class="font-mono text-sm" />
 						<Button
 							type="button"
 							variant="outline"

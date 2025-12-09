@@ -24,9 +24,7 @@
 
 	// Get selected project for display
 	const selectedProject = $derived(
-		data.selectedProjectId
-			? data.projects.find((p) => p.id === data.selectedProjectId)
-			: null
+		data.selectedProjectId ? data.projects.find((p) => p.id === data.selectedProjectId) : null
 	);
 </script>
 

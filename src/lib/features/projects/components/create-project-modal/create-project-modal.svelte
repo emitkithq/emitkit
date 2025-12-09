@@ -91,8 +91,8 @@
 </script>
 
 <Dialog.Root open={true}>
-	<Dialog.Content class="sm:max-w-[425px] max-h-[80dvh] flex flex-col p-0">
-		<Dialog.Header class="px-6 pt-6 shrink-0">
+	<Dialog.Content class="flex max-h-[80dvh] flex-col p-0 sm:max-w-[425px]">
+		<Dialog.Header class="shrink-0 px-6 pt-6">
 			<Dialog.Title>Create New Project</Dialog.Title>
 			<Dialog.Description>
 				Create a project for your application. An API key will be generated automatically.
@@ -104,7 +104,7 @@
 				e.preventDefault();
 				handleSubmit();
 			}}
-			class="flex flex-col min-h-0 flex-1"
+			class="flex min-h-0 flex-1 flex-col"
 		>
 			<div class="flex-1 overflow-y-auto px-6 py-4">
 				<!-- Error Display -->
@@ -170,7 +170,7 @@
 				</Field.Group>
 			</div>
 
-			<Dialog.Footer class="px-6 pb-6 shrink-0">
+			<Dialog.Footer class="shrink-0 px-6 pb-6">
 				<Button type="button" variant="outline" onclick={handleCancel} disabled={isSubmitting}>
 					Cancel
 				</Button>

@@ -82,9 +82,8 @@
 	// Setup SSE connection reactively when props change
 	$effect(() => {
 		// Determine SSE endpoint based on whether we're in channel-specific view
-		const sseEndpoint = channelId && projectId
-			? `/events/${projectId}/${channelId}/stream`
-			: `/stream`;
+		const sseEndpoint =
+			channelId && projectId ? `/events/${projectId}/${channelId}/stream` : `/stream`;
 
 		const eventSource = new EventSource(sseEndpoint);
 

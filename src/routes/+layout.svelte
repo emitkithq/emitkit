@@ -17,8 +17,12 @@
 
 	let { data, children } = $props();
 
-	setSiteConfig(data.config);
 	const config = useSiteConfig();
+
+	// Update site config reactively when data changes
+	$effect(() => {
+		setSiteConfig(data.config);
+	});
 
 	// Register service worker for PWA functionality
 	onMount(() => {

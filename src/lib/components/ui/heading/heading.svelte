@@ -48,9 +48,9 @@
 		...restProps
 	}: HeadingProps = $props();
 
-	const tag = as ?? size ?? 'h2';
+	const tag = $derived(as ?? size ?? 'h2');
 
-	const computedClass: string = cn(headingVariants({ size }), className);
+	const computedClass = $derived(cn(headingVariants({ size }), className));
 </script>
 
 {#if tag === 'h1' || tag === 'pageTitle'}

@@ -69,7 +69,7 @@
 					{/if}
 				{:else if Array.isArray(value)}
 					<div class="flex flex-wrap gap-1.5">
-						{#each value as item}
+						{#each value as item, itemIndex (itemIndex)}
 							<Badge variant="secondary" class="text-xs font-normal">
 								{typeof item === 'object' ? JSON.stringify(item) : String(item)}
 							</Badge>
