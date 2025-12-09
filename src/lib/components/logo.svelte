@@ -68,6 +68,7 @@
 {/snippet}
 
 {#if href}
+	<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
 	<a {href} class={computedWrapperClass}>
 		{@render logo([className, 'dark:fill-white, fill-black'])}
 

@@ -50,7 +50,7 @@
 	// Clear page actions when route changes to prevent stale actions from previous routes
 	$effect(() => {
 		// Watch the route ID to detect navigation
-		page.route.id;
+		void page.route.id;
 		// This effect will run after route changes, giving child components a chance to register new actions
 	});
 </script>

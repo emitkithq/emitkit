@@ -4,19 +4,17 @@ import type { Component } from 'svelte';
 const PAGE_ACTIONS_KEY = Symbol('page-actions');
 
 interface PageAction {
-	// biome-ignore lint/suspicious/noExplicitAny: Component props can be any shape
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Component props can be any shape
 	component: Component<any>;
-	// biome-ignore lint/suspicious/noExplicitAny: Props can be any shape
-	props: Record<string, any>;
+	props: Record<string, unknown>;
 	ownerId: symbol;
 	actionId: symbol;
 }
 
 interface ComponentWithProps {
-	// biome-ignore lint/suspicious/noExplicitAny: Component props can be any shape
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Component props can be any shape
 	component: Component<any>;
-	// biome-ignore lint/suspicious/noExplicitAny: Props can be any shape
-	props: Record<string, any>;
+	props: Record<string, unknown>;
 }
 
 interface PageActionsContext {

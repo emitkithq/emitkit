@@ -14,7 +14,7 @@
 		...rest
 	}: EmojiPickerListProps = $props();
 
-	let EmojiPickerList: any = $state(null);
+	let EmojiPickerList: typeof import('./emoji-picker-list.svelte').default | null = $state(null);
 	let isLoading = $state(true);
 
 	onMount(async () => {

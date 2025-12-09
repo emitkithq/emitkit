@@ -167,9 +167,7 @@ class EmojiPickerSkinToneSelectorState {
 	}
 
 	previewEmoji = $derived.by(() => {
-		for (const emoji of Object.entries(emojiData.emojis)) {
-			const [_, data] = emoji;
-
+		for (const [, data] of Object.entries(emojiData.emojis)) {
 			let found = false;
 			for (const skin of data.skins) {
 				if (skin.native === this.opts.previewEmoji.current) {

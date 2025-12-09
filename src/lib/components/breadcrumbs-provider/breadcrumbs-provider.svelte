@@ -12,10 +12,10 @@
 	};
 	export type ModuleData = {
 		pageTitle?: string;
-		getPageTitle?: (data: any) => string;
+		getPageTitle?: (data: Record<string, unknown>) => string;
 	};
 
-	export type BreadcrumbsProps<Metadata = any> = {
+	export type BreadcrumbsProps<Metadata = BreadcrumbMetadata> = {
 		// Relative path to the routes folder for the glob import
 		relPathToRoutes?: string;
 		// The route from the routers perspective, e.g. $page.route.id
@@ -23,12 +23,14 @@
 		url: URL;
 		crumbs?: Breadcrumb<Metadata>[];
 		routeModules?: Record<string, ModuleData>;
-		pageData: any;
-		children?: Snippet<[any]>;
+		pageData: Record<string, unknown>;
+		children?: Snippet<
+			[{ crumbs: Breadcrumb<Metadata>[]; routeModules: Record<string, ModuleData> | undefined }]
+		>;
 	};
 </script>
 
-<script lang="ts" generics="Metadata = any">
+<script lang="ts" generics="Metadata = BreadcrumbMetadata">
 	import { onMount } from 'svelte';
 	import { useBreadcrumbs } from './state.svelte.js';
 

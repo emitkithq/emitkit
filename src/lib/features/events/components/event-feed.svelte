@@ -12,6 +12,7 @@
 		type EventWithNewStatus,
 		type GroupedEvents
 	} from '$lib/features/events/utils/time-grouping';
+	import { SvelteSet, SvelteMap } from 'svelte/reactivity';
 
 	let {
 		organizationId,
@@ -32,7 +33,7 @@
 	} = $props();
 
 	// Track loaded event IDs to prevent duplicates
-	let loadedEventIds = $state(new Set<string>());
+	let loadedEventIds = new SvelteSet<string>();
 
 	// Initialize with server-loaded events (not marked as new)
 	let allEvents = $state<EventWithNewStatus[]>([]);
@@ -40,14 +41,14 @@
 	// React to initialEvents prop changes (when navigating or filtering)
 	$effect(() => {
 		if (initialEvents && initialEvents.items) {
-			loadedEventIds = new Set(initialEvents.items.map((event) => event.id));
+			loadedEventIds = new SvelteSet(initialEvents.items.map((event) => event.id));
 			allEvents = initialEvents.items;
 		}
 	});
 
 	// Create maps for channel and project lookups (reactive to prop changes)
-	const projectMap = $derived(new Map(sites.map((project) => [project.id, project])));
-	const channelMap = $derived(new Map(channels.map((channel) => [channel.id, channel])));
+	const projectMap = $derived(new SvelteMap(sites.map((project) => [project.id, project])));
+	const channelMap = $derived(new SvelteMap(channels.map((channel) => [channel.id, channel])));
 
 	// Handle event deletion
 	function handleEventDeleted(eventId: string) {
@@ -60,7 +61,7 @@
 	 */
 	const groupedEvents = $derived.by((): GroupedEvents[] => {
 		const currentTime = new Date();
-		const groups = new Map<string, EventWithNewStatus[]>();
+		const groups = new SvelteMap<string, EventWithNewStatus[]>();
 
 		// Initialize all groups in order
 		TIME_GROUP_ORDER.forEach((g) => groups.set(g, []));

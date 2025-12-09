@@ -3,6 +3,7 @@
 	import * as Collapsible from '$lib/components/ui/collapsible/index.js';
 	import ChevronRightIcon from '@lucide/svelte/icons/chevron-right';
 	import type { Component, ComponentProps } from 'svelte';
+	import { SvelteSet } from 'svelte/reactivity';
 
 	type NavItem = {
 		title: string;
@@ -21,7 +22,7 @@
 	} = $props();
 
 	// Track which items are open
-	let openItems = $state<Set<string>>(new Set());
+	let openItems = new SvelteSet<string>();
 
 	function toggleItem(title: string) {
 		if (openItems.has(title)) {
@@ -29,7 +30,7 @@
 		} else {
 			openItems.add(title);
 		}
-		openItems = new Set(openItems);
+		openItems = new SvelteSet(openItems);
 	}
 </script>
 

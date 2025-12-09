@@ -1,8 +1,7 @@
 import { browser } from '$app/environment';
 import type {
 	NotificationPermissionState,
-	BrowserSupport,
-	SubscriptionState
+	BrowserSupport
 } from '$lib/features/notifications/types';
 import {
 	subscribeToPushCommand,

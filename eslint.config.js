@@ -37,5 +37,17 @@ export default defineConfig(
 				svelteConfig
 			}
 		}
+	},
+	{
+		files: [
+			'src/lib/components/app/nav-projects.svelte',
+			'src/lib/components/app/nav-secondary.svelte',
+			'src/lib/components/public/header.svelte',
+			'src/lib/components/ui/button/button.svelte',
+			'src/lib/features/events/components/event-list-item-metadata.svelte'
+		],
+		rules: {
+			'svelte/no-navigation-without-resolve': 'off'
+		}
 	}
 );

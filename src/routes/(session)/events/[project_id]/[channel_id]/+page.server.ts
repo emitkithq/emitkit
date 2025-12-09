@@ -5,7 +5,7 @@ import { listChannels } from '$lib/features/channels/server/repository';
 import { listEvents } from '$lib/features/events/server';
 import { error } from '@sveltejs/kit';
 
-export const load: PageServerLoad = async ({ params, parent, request }) => {
+export const load: PageServerLoad = async ({ params, parent }) => {
 	// Get parent data (includes orgId from session layout)
 	const { orgId } = await parent();
 

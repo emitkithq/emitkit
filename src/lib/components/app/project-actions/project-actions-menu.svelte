@@ -1,6 +1,5 @@
 <script lang="ts">
 	import EllipsisVerticalIcon from '@lucide/svelte/icons/ellipsis-vertical';
-	import PlusIcon from '@lucide/svelte/icons/plus';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
 	import type { Project } from '$lib/features/projects/types';
 

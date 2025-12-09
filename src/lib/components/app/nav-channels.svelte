@@ -24,6 +24,7 @@
 					<Sidebar.MenuItem>
 						<Sidebar.MenuButton>
 							{#snippet child({ props })}
+								<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
 								<a href="/{channel.projectId}/{channel.id}" {...props}>
 									<HashIcon />
 

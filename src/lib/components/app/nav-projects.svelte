@@ -17,6 +17,7 @@
 	import { page } from '$app/state';
 	import type { Project } from '$lib/features/projects/types';
 	import type { Channel } from '$lib/server/db/schema/channel';
+	import { SvelteSet } from 'svelte/reactivity';
 
 	const organization = useCurrentOrganization();
 	const modals = useModals();
@@ -57,8 +58,8 @@
 		channels: Record<string, { items: Channel[]; loading: boolean }>,
 		activeProjectId: string | undefined,
 		userOverrides: Record<string, boolean>
-	): Set<string> {
-		const openSet = new Set<string>();
+	): SvelteSet<string> {
+		const openSet = new SvelteSet<string>();
 
 		// Start with strategy-based defaults
 		switch (strategy) {

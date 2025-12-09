@@ -4,8 +4,9 @@ import type { Component } from 'svelte';
 const BREADCRUMB_ACTIONS_KEY = Symbol('breadcrumb-actions');
 
 interface BreadcrumbAction {
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Component props can be any shape
 	component: Component<any>;
-	props: Record<string, any>;
+	props: Record<string, unknown>;
 }
 
 interface BreadcrumbActionsContext {

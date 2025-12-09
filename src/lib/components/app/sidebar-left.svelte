@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { browser } from '$app/environment';
-	import HouseIcon from '@lucide/svelte/icons/house';
 	import MessageCircleQuestionIcon from '@lucide/svelte/icons/message-circle-question';
 	import Settings2Icon from '@lucide/svelte/icons/settings-2';
 	import { OrganizationSwitcher, UserButton } from 'better-auth-ui-svelte';

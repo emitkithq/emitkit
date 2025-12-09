@@ -96,11 +96,11 @@
 
 	// Auto-save state changes
 	$effect(() => {
-		// Track these values
-		dismissed;
-		collapsed;
-		apiKeyCreated;
-		apiKey;
+		// Track these values to trigger effect when they change
+		void dismissed;
+		void collapsed;
+		void apiKeyCreated;
+		void apiKey;
 
 		// Save whenever they change
 		saveState();

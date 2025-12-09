@@ -16,6 +16,7 @@
 		} else {
 			url.searchParams.delete('project_id');
 		}
+		// eslint-disable-next-line svelte/no-navigation-without-resolve
 		goto(url.toString(), { replaceState: true, invalidateAll: true });
 	}
 

@@ -1,5 +1,4 @@
 import type { ApiKey } from '$lib/server/db/schema';
-import type { Project } from '$lib/server/db/schema';
 
 export type ApiKeyWithProject = ApiKey & {
 	project: {

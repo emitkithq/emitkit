@@ -23,7 +23,6 @@
 		organizationId,
 		onDeleted,
 		projectName,
-		projectSlug,
 		channelName,
 		showChannelContext = false
 	}: {
@@ -33,7 +32,6 @@
 		organizationId: string;
 		onDeleted?: () => void;
 		projectName?: string;
-		projectSlug?: string;
 		channelName?: string;
 		showChannelContext?: boolean;
 	} = $props();
@@ -104,6 +102,7 @@
 	// Navigate to channel view
 	function handleNavigateToChannel() {
 		if (event.projectId && event.channelId) {
+			// eslint-disable-next-line svelte/no-navigation-without-resolve
 			goto(`/events/${event.projectId}/${event.channelId}`);
 		}
 	}

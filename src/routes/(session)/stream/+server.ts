@@ -1,4 +1,3 @@
-import { getEventsAfter } from '$lib/features/events/server';
 import type { RequestHandler } from './$types';
 import { createContextLogger } from '$lib/server/logger';
 import { error } from '@sveltejs/kit';

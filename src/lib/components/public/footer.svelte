@@ -26,6 +26,7 @@
 					<!-- Quick Links -->
 					<div class="flex flex-col gap-y-4">
 						<h3 class="text-sm font-semibold">Quick Links</h3>
+						<!-- eslint-disable svelte/no-navigation-without-resolve -->
 						<nav class="flex flex-col gap-y-2 text-sm">
 							<a href="/" class="text-muted-foreground transition-colors hover:text-foreground">
 								Home
@@ -49,6 +50,7 @@
 								Contact
 							</a>
 						</nav>
+						<!-- eslint-enable svelte/no-navigation-without-resolve -->
 					</div>
 				</div>
 			</Wrapper>

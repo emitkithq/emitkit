@@ -40,16 +40,17 @@ export const authClient = new Proxy(baseAuthClient, {
 			return new Proxy(target.signUp, {
 				get(signUpTarget, signUpProp) {
 					if (signUpProp === 'email') {
-						return async (options: any) => {
+						return async (options: Record<string, unknown>) => {
 							// Get userType from URL if available
 							const params = new URLSearchParams(window.location.search);
 							const userType = params.get('userType') || 'talent';
 
 							// Inject userType into the signup request
+							// Type assertion needed because userType is not in the base better-auth type
 							return signUpTarget.email({
 								...options,
 								userType
-							});
+							} as unknown as Parameters<typeof signUpTarget.email>[0]);
 						};
 					}
 					return signUpTarget[signUpProp as keyof typeof signUpTarget];

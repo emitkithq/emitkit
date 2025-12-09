@@ -13,6 +13,7 @@
 	import CheckCircleIcon from '@lucide/svelte/icons/check-circle';
 	import AlertCircleIcon from '@lucide/svelte/icons/alert-circle';
 	import InfoIcon from '@lucide/svelte/icons/info';
+	import { SvelteSet } from 'svelte/reactivity';
 
 	interface Props {
 		projects: ProjectWithChannels[];
@@ -24,31 +25,19 @@
 	const manager = createNotificationManager();
 
 	// Local state that syncs with currentSubscription prop
-	let subscribedChannels = $state<Set<string>>(new Set());
+	let subscribedChannels = new SvelteSet<string>();
 	let subscribeToAll = $state(false);
 
 	// Sync local state when currentSubscription changes
 	$effect(() => {
-		subscribedChannels = new Set(currentSubscription?.channelIds || []);
+		subscribedChannels = new SvelteSet(currentSubscription?.channelIds || []);
 		subscribeToAll = (currentSubscription?.channelIds?.length || 0) === 0;
 	});
-
-	// Derive all channel IDs
-	const allChannelIds = $derived(projects.flatMap((project) => project.channels.map((c) => c.id)));
 
 	// Check if a project has all channels enabled
 	function isSiteEnabled(project: ProjectWithChannels): boolean {
 		if (subscribeToAll) return true;
 		return project.channels.every((channel) => subscribedChannels.has(channel.id));
-	}
-
-	// Check if a project has some channels enabled
-	function isSitePartiallyEnabled(project: ProjectWithChannels): boolean {
-		if (subscribeToAll) return false;
-		const enabledCount = project.channels.filter((channel) =>
-			subscribedChannels.has(channel.id)
-		).length;
-		return enabledCount > 0 && enabledCount < project.channels.length;
 	}
 
 	// Toggle master switch
@@ -58,14 +47,14 @@
 			const success = await manager.subscribe([]);
 			if (success) {
 				subscribeToAll = true;
-				subscribedChannels = new Set();
+				subscribedChannels = new SvelteSet();
 			}
 		} else {
 			// Disable all notifications
 			const success = await manager.unsubscribe();
 			if (success) {
 				subscribeToAll = false;
-				subscribedChannels = new Set();
+				subscribedChannels = new SvelteSet();
 			}
 		}
 	}
@@ -74,13 +63,13 @@
 	async function toggleSite(project: ProjectWithChannels, enabled: boolean) {
 		if (enabled) {
 			// Enable all channels in this project
-			const newChannels = new Set(subscribedChannels);
+			const newChannels = new SvelteSet(subscribedChannels);
 			project.channels.forEach((channel) => newChannels.add(channel.id));
 			subscribedChannels = newChannels;
 			subscribeToAll = false;
 		} else {
 			// Disable all channels in this project
-			const newChannels = new Set(subscribedChannels);
+			const newChannels = new SvelteSet(subscribedChannels);
 			project.channels.forEach((channel) => newChannels.delete(channel.id));
 			subscribedChannels = newChannels;
 			subscribeToAll = false;
@@ -92,7 +81,7 @@
 
 	// Toggle individual channel
 	async function toggleChannel(channelId: string, enabled: boolean) {
-		const newChannels = new Set(subscribedChannels);
+		const newChannels = new SvelteSet(subscribedChannels);
 		if (enabled) {
 			newChannels.add(channelId);
 		} else {
