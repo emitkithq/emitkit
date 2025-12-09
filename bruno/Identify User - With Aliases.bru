@@ -1,0 +1,26 @@
+meta {
+  name: Identify User - With Aliases
+  type: http
+  seq: 8
+}
+
+post {
+  url: {{api_url}}/v1/identify
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "user_id": "user_789",
+    "properties": {
+      "email": "jane.smith@example.com",
+      "name": "Jane Smith"
+    },
+    "aliases": [
+      "jane.smith@example.com",
+      "jsmith",
+      "temp_user_abc123"
+    ]
+  }
+}

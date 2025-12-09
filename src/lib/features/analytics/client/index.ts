@@ -1,0 +1,1 @@
+export { clientAnalytics } from './analytics';

@@ -1,0 +1,49 @@
+# License
+
+The EmitKit software is licensed under the AGPL-3.0 license with an additional Commons Clause restriction.
+
+## AGPL-3.0 License
+
+The software is licensed under the GNU Affero General Public License Version 3 (AGPL-3.0).
+You can find the full license text at: https://www.gnu.org/licenses/agpl-3.0.html
+
+### Key Points of AGPL-3.0
+
+- You must disclose the source code of any modified version you run publicly
+- If you modify and deploy this software, you must make your modifications available
+- Any derivative works must also be licensed under AGPL-3.0
+- This includes running the software as a network service
+
+## Commons Clause Restriction
+
+The Software is provided to you by the EmitKit Contributors under the License, as defined below, subject to the following condition.
+
+Without limiting other conditions in the License, the grant of rights under the License will not include, and the License does not grant to you, the right to Sell the Software.
+
+For purposes of the foregoing, "Sell" means practicing any or all of the rights granted to you under the License to provide to third parties, for a fee or other consideration (including without limitation fees for hosting or consulting/support services related to the Software), a product or service whose value derives, entirely or substantially, from the functionality of the Software.
+
+## What This Means
+
+**You CAN:**
+- Use EmitKit for personal or internal business purposes
+- Modify the source code for your own needs
+- Self-host your own instance
+- Fork and contribute back to the project
+
+**You CANNOT:**
+- Sell EmitKit as a product
+- Offer EmitKit hosting as a paid service to clients
+- Charge for access to a EmitKit instance
+- Sell consulting services where EmitKit is the primary value
+
+## Future Commercial Features
+
+Certain features may be released under a separate Commercial License, which will be clearly marked in the codebase (typically in directories marked with "(ee)" for Enterprise Edition) and will require a separate subscription for production use.
+
+## No Warranty
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+---
+
+Copyright (c) 2024 EmitKit Contributors

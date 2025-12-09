@@ -1,0 +1,17 @@
+DESCRIPTION >
+    Materialized pipe to aggregate events per day.
+    Creates daily aggregations for historical analytics.
+
+NODE daily_aggregation
+SQL >
+    SELECT
+        toDate(created_at) AS day,
+        organization_id,
+        channel_id,
+        count() AS event_count,
+        uniqState(user_id) AS unique_users
+    FROM events
+    GROUP BY day, organization_id, channel_id
+
+TYPE MATERIALIZED
+DATASOURCE events_daily_agg

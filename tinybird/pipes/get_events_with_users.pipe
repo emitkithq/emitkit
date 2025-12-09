@@ -1,0 +1,55 @@
+DESCRIPTION >
+    Get events enriched with user identity data.
+    Joins events with user properties for analytics.
+
+TOKEN "get_events_with_users_endpoint" READ
+
+NODE events_with_users
+SQL >
+    %
+    SELECT
+        e.id,
+        e.channel_id,
+        e.organization_id,
+        e.title,
+        e.description,
+        e.icon,
+        e.tags,
+        e.metadata,
+        e.user_id,
+        e.notify,
+        e.display_as,
+        e.source,
+        e.created_at,
+        u.email as user_email,
+        u.name as user_name,
+        u.properties as user_properties
+    FROM events e
+    LEFT JOIN (
+        SELECT
+            organization_id,
+            user_id,
+            email,
+            name,
+            properties,
+            updated_at,
+            ROW_NUMBER() OVER (PARTITION BY organization_id, user_id ORDER BY updated_at DESC) as rn
+        FROM user_identities
+    ) u ON e.organization_id = u.organization_id
+        AND e.user_id = u.user_id
+        AND u.rn = 1
+    WHERE e.organization_id = {{ String(organization_id, required=True) }}
+      {% if defined(channel_id) %}
+        AND e.channel_id = {{ String(channel_id) }}
+      {% end %}
+      {% if defined(date_from) %}
+        AND e.created_at >= {{ DateTime(date_from) }}
+      {% end %}
+      {% if defined(date_to) %}
+        AND e.created_at <= {{ DateTime(date_to) }}
+      {% end %}
+    ORDER BY e.created_at DESC
+    LIMIT {{ Int32(limit, 100) }}
+    OFFSET {{ Int32(offset, 0) }}
+
+TYPE endpoint

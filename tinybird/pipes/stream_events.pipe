@@ -1,0 +1,40 @@
+DESCRIPTION >
+    Real-time event streaming for SSE replacement.
+    Gets events after a specific timestamp for a channel.
+    Automatically enforces retention policy based on event's retention_tier.
+    Used for polling-based real-time updates.
+
+TOKEN "dashboard" READ
+
+NODE recent_events
+SQL >
+    %
+    SELECT
+        id,
+        channel_id,
+        organization_id,
+        title,
+        description,
+        icon,
+        tags,
+        metadata,
+        user_id,
+        notify,
+        display_as,
+        source,
+        created_at
+    FROM events
+    WHERE
+        organization_id = {{ String(organization_id, required=True) }}
+        AND channel_id = {{ String(channel_id, required=True) }}
+        AND created_at > {{ DateTime(since, required=True) }}
+        -- Retention filtering based on tier (no JOIN!)
+        AND (
+            (retention_tier = 'basic' AND created_at >= now() - INTERVAL 90 DAY)
+            OR (retention_tier = 'premium' AND created_at >= now() - INTERVAL 365 DAY)
+            OR retention_tier = 'unlimited'
+        )
+    ORDER BY created_at ASC
+    LIMIT {{ Int32(limit, 100) }}
+
+TYPE endpoint

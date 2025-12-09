@@ -1,0 +1,26 @@
+DESCRIPTION >
+    Get user identity by user_id.
+    Returns the latest version of user properties and aliases.
+
+TOKEN "get_user_identity_endpoint" READ
+
+NODE fetch_user_identity
+SQL >
+    %
+    SELECT
+        id,
+        organization_id,
+        user_id,
+        email,
+        name,
+        properties,
+        aliases,
+        created_at,
+        updated_at
+    FROM user_identities
+    WHERE organization_id = {{ String(organization_id, required=True) }}
+      AND user_id = {{ String(user_id, required=True) }}
+    ORDER BY updated_at DESC
+    LIMIT 1
+
+TYPE endpoint

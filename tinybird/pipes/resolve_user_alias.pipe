@@ -1,0 +1,23 @@
+DESCRIPTION >
+    Resolve an alias to a canonical user_id.
+    Searches both the user_id field and the aliases array.
+
+TOKEN "resolve_user_alias_endpoint" READ
+
+NODE resolve_alias
+SQL >
+    %
+    SELECT
+        user_id,
+        email,
+        name
+    FROM user_identities
+    WHERE organization_id = {{ String(organization_id, required=True) }}
+      AND (
+        user_id = {{ String(alias, required=True) }}
+        OR has(aliases, {{ String(alias, required=True) }})
+      )
+    ORDER BY updated_at DESC
+    LIMIT 1
+
+TYPE endpoint

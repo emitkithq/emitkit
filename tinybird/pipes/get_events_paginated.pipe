@@ -1,0 +1,53 @@
+DESCRIPTION >
+    Get paginated list of events with optional filters.
+    Supports filtering by organization, folder, channel, and date range.
+    Automatically enforces retention policy based on event's retention_tier.
+    Returns events in reverse chronological order (newest first).
+    Hierarchy: organization -> folder -> channel -> event
+
+TOKEN "dashboard" READ
+
+NODE events_filtered
+SQL >
+    %
+    SELECT
+        id,
+        channel_id,
+        project_id,
+        organization_id,
+        title,
+        description,
+        icon,
+        tags,
+        metadata,
+        user_id,
+        notify,
+        display_as,
+        source,
+        created_at
+    FROM events
+    WHERE
+        organization_id = {{ String(organization_id, required=True) }}
+        -- Retention filtering based on tier (no JOIN!)
+        AND (
+            (retention_tier = 'basic' AND created_at >= now() - INTERVAL 90 DAY)
+            OR (retention_tier = 'premium' AND created_at >= now() - INTERVAL 365 DAY)
+            OR retention_tier = 'unlimited'
+        )
+        {% if defined(project_id) %}
+            AND project_id = {{ String(project_id) }}
+        {% end %}
+        {% if defined(channel_id) %}
+            AND channel_id = {{ String(channel_id) }}
+        {% end %}
+        {% if defined(date_from) %}
+            AND created_at >= {{ DateTime(date_from) }}
+        {% end %}
+        {% if defined(date_to) %}
+            AND created_at <= {{ DateTime(date_to) }}
+        {% end %}
+    ORDER BY created_at DESC
+    LIMIT {{ Int32(limit, 20) }}
+    OFFSET {{ Int32(offset, 0) }}
+
+TYPE endpoint

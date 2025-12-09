@@ -1,0 +1,14 @@
+export const FIELD_LENGTHS = {
+	ICON: 50,
+	NAME: 255,
+	SLUG: 255,
+	DESCRIPTION: 5000,
+	EVENT_TITLE: 500,
+	USER_ID: 255,
+	URL: 2048
+} as const;
+
+export const TRUNCATE_LENGTHS = {
+	DESCRIPTION: 60,
+	METADATA_STRING: 100
+} as const;

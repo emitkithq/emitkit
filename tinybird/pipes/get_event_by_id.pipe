@@ -1,0 +1,37 @@
+DESCRIPTION >
+    Get a single event by ID.
+    Automatically enforces retention policy based on event's retention_tier.
+    Returns the event details if found and not expired, otherwise empty result.
+
+TOKEN "dashboard" READ
+
+NODE event_by_id
+SQL >
+    %
+    SELECT
+        id,
+        channel_id,
+        project_id,
+        organization_id,
+        title,
+        description,
+        icon,
+        tags,
+        metadata,
+        user_id,
+        notify,
+        display_as,
+        source,
+        created_at
+    FROM events
+    WHERE
+        id = {{ String(event_id, required=True) }}
+        -- Retention filtering based on tier
+        AND (
+            (retention_tier = 'basic' AND created_at >= now() - INTERVAL 90 DAY)
+            OR (retention_tier = 'premium' AND created_at >= now() - INTERVAL 365 DAY)
+            OR retention_tier = 'unlimited'
+        )
+    LIMIT 1
+
+TYPE endpoint

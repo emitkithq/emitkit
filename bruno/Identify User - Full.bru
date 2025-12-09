@@ -1,0 +1,37 @@
+meta {
+  name: Identify User - Full
+  type: http
+  seq: 9
+}
+
+post {
+  url: {{api_url}}/v1/identify
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "user_id": "user_999",
+    "properties": {
+      "email": "alice.johnson@example.com",
+      "name": "Alice Johnson",
+      "plan": "enterprise",
+      "signupDate": "2025-01-20",
+      "company": "Tech Innovations Inc",
+      "role": "CTO",
+      "employees": 150,
+      "industry": "SaaS",
+      "location": "San Francisco, CA",
+      "customField1": "value1",
+      "customField2": true,
+      "customField3": 42
+    },
+    "aliases": [
+      "alice.johnson@example.com",
+      "ajohnson",
+      "alice_j",
+      "temp_user_xyz789"
+    ]
+  }
+}

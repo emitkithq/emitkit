@@ -1,0 +1,884 @@
+openapi: 3.1.0
+info:
+  title: EmitKit API
+  version: 1.0.0
+  description: |
+    Real-time event tracking and notifications API for modern applications.
+
+    ## Authentication
+
+    All API requests require authentication using an API key in the Authorization header:
+    ```
+    Authorization: Bearer emitkit_xxxxxxxxxxxxxxxxxxxxx
+    ```
+
+    API keys are scoped to organizations and sites. Create API keys in your dashboard.
+
+    ## Rate Limiting
+
+    - Default: 100 requests per minute per API key
+    - Rate limit information is returned in response headers:
+      - `X-RateLimit-Limit`: Maximum requests allowed
+      - `X-RateLimit-Remaining`: Remaining requests in current window
+      - `X-RateLimit-Reset`: Unix timestamp when limit resets
+
+    ## Idempotency
+
+    To safely retry requests without creating duplicates, include an `Idempotency-Key` header:
+    ```
+    Idempotency-Key: payment-123-retry-1
+    ```
+
+    Idempotency keys are valid for 24 hours. Replayed requests return the original response with an `X-Idempotent-Replay: true` header.
+
+    ## Request IDs
+
+    Every response includes a `requestId` field for debugging and support purposes.
+
+  contact:
+    name: EmitKit Support
+    url: https://emitkit.com/support
+    email: heysupport@emitkit.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: https://api.emitkit.com
+    description: Production API
+  - url: http://localhost:5173/api
+    description: Local Development
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: Events
+    description: Create and manage events
+  - name: Identity
+    description: Track user identities and aliases
+  - name: Meta
+    description: API metadata and health checks
+
+paths:
+  /v1/events:
+    post:
+      summary: Create Event
+      description: |
+        Creates a new event and optionally sends notifications to connected clients.
+
+        ## Channel Auto-Creation
+
+        If the specified channel doesn't exist, it will be automatically created.
+        This reduces setup complexity for simple integrations.
+
+        ## Notifications
+
+        Set `notify: true` (default) to send real-time notifications via Server-Sent Events (SSE).
+        Connected dashboard clients will see the event immediately.
+
+        ## Display Modes
+
+        - `message`: Displayed as a chat-like message
+        - `notification`: Displayed as a prominent notification banner
+
+      operationId: createEvent
+      tags:
+        - Events
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: false
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 255
+          description: |
+            Unique key to ensure idempotent request processing.
+            Prevents duplicate events from retries or webhook replays.
+            Valid for 24 hours.
+          example: payment-123-retry-1
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateEventRequest'
+            examples:
+              basic:
+                summary: Basic event
+                value:
+                  channelName: general
+                  title: Test notification
+                  description: This is a test event
+                  icon: 📝
+                  notify: true
+              payment:
+                summary: Payment event
+                value:
+                  channelName: payments
+                  title: Payment Received
+                  description: User upgraded to Pro plan
+                  icon: 💰
+                  tags:
+                    - payment
+                    - upgrade
+                  metadata:
+                    amount: 99.99
+                    currency: USD
+                    plan: pro
+                    userId: user_123
+                    transactionId: txn_abc123
+                  userId: user_123
+                  notify: true
+              userSignup:
+                summary: User signup event
+                value:
+                  channelName: user-signups
+                  title: New User Registered
+                  description: A new user has signed up for your application
+                  icon: 👋
+                  tags:
+                    - signup
+                    - onboarding
+                    - new-user
+                  metadata:
+                    email: user@example.com
+                    plan: free
+                    source: organic
+                    referrer: google
+                  userId: user_456
+                  notify: true
+
+      responses:
+        '201':
+          description: Event created successfully
+          headers:
+            X-RateLimit-Limit:
+              schema:
+                type: integer
+              description: Maximum requests allowed in the current time window
+              example: 100
+            X-RateLimit-Remaining:
+              schema:
+                type: integer
+              description: Remaining requests in current window
+              example: 95
+            X-RateLimit-Reset:
+              schema:
+                type: integer
+                format: int64
+              description: Unix timestamp (seconds) when the rate limit resets
+              example: 1733270400
+            X-Idempotent-Replay:
+              schema:
+                type: string
+                enum: ['true']
+              description: Present only when returning a cached idempotent response
+
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateEventResponse'
+              examples:
+                success:
+                  summary: Successful response
+                  value:
+                    success: true
+                    data:
+                      id: event_xxxxxxxxxxxxxxxxxxxxx
+                      channelId: ch_xxxxxxxxxxxxxxxxxxxxx
+                      channelName: payments
+                      title: Payment Received
+                      createdAt: '2025-01-15T10:30:00.000Z'
+                    requestId: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+
+        '400':
+          description: Validation error - request body is malformed or missing required fields
+          headers:
+            X-RateLimit-Limit:
+              schema:
+                type: integer
+            X-RateLimit-Remaining:
+              schema:
+                type: integer
+            X-RateLimit-Reset:
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+              examples:
+                missingChannel:
+                  summary: Missing channelName
+                  value:
+                    success: false
+                    error: Validation error
+                    details:
+                      - path: ['channelName']
+                        message: Required
+                    requestId: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+                invalidTitle:
+                  summary: Title too long
+                  value:
+                    success: false
+                    error: Validation error
+                    details:
+                      - path: ['title']
+                        message: String must contain at most 500 character(s)
+                    requestId: b2c3d4e5-f6a7-8901-bcde-f12345678901
+
+        '401':
+          description: Unauthorized - missing or invalid API key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedError'
+              examples:
+                missingAuth:
+                  summary: Missing Authorization header
+                  value:
+                    error: Unauthorized
+                    message: Invalid or missing authentication credentials
+                invalidKey:
+                  summary: Invalid API key
+                  value:
+                    error: Unauthorized
+                    message: Invalid or missing authentication credentials
+
+        '429':
+          description: Rate limit exceeded
+          headers:
+            X-RateLimit-Limit:
+              schema:
+                type: integer
+            X-RateLimit-Remaining:
+              schema:
+                type: integer
+                enum: [0]
+            X-RateLimit-Reset:
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RateLimitError'
+
+        '500':
+          description: Internal server error
+          headers:
+            X-RateLimit-Limit:
+              schema:
+                type: integer
+            X-RateLimit-Remaining:
+              schema:
+                type: integer
+            X-RateLimit-Reset:
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServerError'
+
+  /v1/identify:
+    post:
+      summary: Identify User
+      description: |
+        Creates or updates a user identity with custom properties and aliases.
+
+        ## User Identity
+
+        User identities store custom properties about your users (email, name, plan, etc.)
+        and allow you to track events by user ID.
+
+        ## Aliases
+
+        Aliases let you reference the same user by multiple identifiers:
+        - Email addresses
+        - Usernames
+        - External system IDs
+        - Social media handles
+
+        ## Idempotency
+
+        User identity creation is naturally idempotent. Calling identify multiple times
+        for the same userId will update the properties without creating duplicates.
+
+        ## Property Merging
+
+        Properties are **replaced** on each identify call, not merged. Include all
+        properties you want to keep.
+
+      operationId: identifyUser
+      tags:
+        - Identity
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IdentifyUserRequest'
+            examples:
+              basic:
+                summary: Basic user identification
+                value:
+                  user_id: user_123
+                  properties:
+                    email: john@example.com
+                    name: John Doe
+                    plan: pro
+              withAliases:
+                summary: User with multiple aliases
+                value:
+                  user_id: user_456
+                  properties:
+                    email: jane@example.com
+                    name: Jane Smith
+                    plan: free
+                    signupDate: '2025-01-15'
+                  aliases:
+                    - jane@example.com
+                    - janesmith
+                    - jane.smith@company.com
+              updateProperties:
+                summary: Update user properties
+                value:
+                  user_id: user_123
+                  properties:
+                    plan: enterprise
+                    seats: 50
+                    upgradeDate: '2025-01-20'
+
+      responses:
+        '200':
+          description: User identified successfully (created or updated)
+          headers:
+            X-RateLimit-Limit:
+              schema:
+                type: integer
+              description: Maximum requests allowed in the current time window
+              example: 100
+            X-RateLimit-Remaining:
+              schema:
+                type: integer
+              description: Remaining requests in current window
+              example: 95
+            X-RateLimit-Reset:
+              schema:
+                type: integer
+                format: int64
+              description: Unix timestamp (seconds) when the rate limit resets
+              example: 1733270400
+
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IdentifyUserResponse'
+              examples:
+                success:
+                  summary: Successful identification
+                  value:
+                    success: true
+                    data:
+                      id: user_identity_xxxxxxxxxxxxxxxxxxxxx
+                      userId: user_123
+                      properties:
+                        email: john@example.com
+                        name: John Doe
+                        plan: pro
+                      aliases:
+                        created:
+                          - john@example.com
+                          - johndoe
+                      updatedAt: '2025-01-15T10:30:00.000Z'
+                    requestId: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+                partialAliasFailure:
+                  summary: Some aliases failed (duplicate)
+                  value:
+                    success: true
+                    data:
+                      id: user_identity_xxxxxxxxxxxxxxxxxxxxx
+                      userId: user_456
+                      properties:
+                        email: jane@example.com
+                        name: Jane Smith
+                      aliases:
+                        created:
+                          - janesmith
+                        failed:
+                          - alias: jane@example.com
+                            reason: Alias already exists
+                      updatedAt: '2025-01-15T10:31:00.000Z'
+                    requestId: b2c3d4e5-f6a7-8901-bcde-f12345678901
+
+        '400':
+          description: Validation error - request body is malformed or missing required fields
+          headers:
+            X-RateLimit-Limit:
+              schema:
+                type: integer
+            X-RateLimit-Remaining:
+              schema:
+                type: integer
+            X-RateLimit-Reset:
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+              examples:
+                missingUserId:
+                  summary: Missing user_id
+                  value:
+                    success: false
+                    error: Validation error
+                    details:
+                      - path: ['user_id']
+                        message: User ID is required
+                    requestId: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+
+        '401':
+          description: Unauthorized - missing or invalid API key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedError'
+
+        '429':
+          description: Rate limit exceeded
+          headers:
+            X-RateLimit-Limit:
+              schema:
+                type: integer
+            X-RateLimit-Remaining:
+              schema:
+                type: integer
+                enum: [0]
+            X-RateLimit-Reset:
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RateLimitError'
+
+        '500':
+          description: Internal server error
+          headers:
+            X-RateLimit-Limit:
+              schema:
+                type: integer
+            X-RateLimit-Remaining:
+              schema:
+                type: integer
+            X-RateLimit-Reset:
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServerError'
+
+  /openapi.json:
+    get:
+      summary: Get OpenAPI Specification
+      description: Returns the OpenAPI 3.1 specification for this API in JSON format
+      operationId: getOpenApiSpec
+      tags:
+        - Meta
+      security: []
+      responses:
+        '200':
+          description: OpenAPI specification
+          content:
+            application/json:
+              schema:
+                type: object
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API Key
+      description: |
+        API key authentication. Format: `emitkit_xxxxxxxxxxxxxxxxxxxxx`
+
+        Create API keys in your EmitKit dashboard. Keys are scoped to a specific
+        organization and site.
+
+  schemas:
+    CreateEventRequest:
+      type: object
+      required:
+        - channelName
+        - title
+      properties:
+        channelName:
+          type: string
+          minLength: 1
+          maxLength: 255
+          description: |
+            Channel name for organizing events. Channels are automatically created
+            if they don't exist. Use kebab-case for consistency (e.g., 'user-signups').
+          example: payments
+
+        title:
+          type: string
+          minLength: 1
+          maxLength: 500
+          description: Event title - the main message
+          example: Payment Received
+
+        description:
+          type: string
+          maxLength: 5000
+          description: Optional detailed description
+          example: User upgraded to Pro plan
+
+        icon:
+          type: string
+          maxLength: 10
+          description: Single emoji icon to display with the event
+          example: 💰
+
+        tags:
+          type: array
+          items:
+            type: string
+            maxLength: 50
+          maxItems: 20
+          description: Array of tags for filtering and organization
+          example:
+            - payment
+            - upgrade
+
+        metadata:
+          type: object
+          additionalProperties: true
+          description: |
+            Custom JSON metadata. Any valid JSON structure is accepted.
+            Use this to attach custom data to events for filtering or display.
+          example:
+            amount: 99.99
+            currency: USD
+            plan: pro
+            userId: user_123
+
+        userId:
+          oneOf:
+            - type: string
+              maxLength: 255
+            - type: 'null'
+          description: |
+            Optional user identifier to associate with this event.
+            Supports both direct user IDs and aliases (email, username, etc.)
+            created via the /v1/identify endpoint. Aliases are automatically
+            resolved to canonical user IDs.
+          example: user_123
+
+        notify:
+          type: boolean
+          default: true
+          description: |
+            Whether to send notifications to connected clients via SSE.
+            Set to false for silent event logging.
+
+        source:
+          type: string
+          maxLength: 100
+          description: Identifier for the source system that created this event
+          example: webhook
+          default: api
+
+    CreateEventResponse:
+      type: object
+      required:
+        - success
+        - data
+        - requestId
+      properties:
+        success:
+          type: boolean
+          description: Indicates successful event creation
+          example: true
+
+        data:
+          type: object
+          required:
+            - id
+            - channelId
+            - channelName
+            - title
+            - createdAt
+          properties:
+            id:
+              type: string
+              description: Unique event identifier
+              example: event_xxxxxxxxxxxxxxxxxxxxx
+
+            channelId:
+              type: string
+              description: Channel ID where event was created
+              example: ch_xxxxxxxxxxxxxxxxxxxxx
+
+            channelName:
+              type: string
+              description: Channel name
+              example: payments
+
+            title:
+              type: string
+              description: Event title
+              example: Payment Received
+
+            createdAt:
+              type: string
+              format: date-time
+              description: ISO 8601 timestamp of event creation
+              example: '2025-01-15T10:30:00.000Z'
+
+        requestId:
+          type: string
+          format: uuid
+          description: Unique request identifier for debugging and support
+          example: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+
+    ValidationError:
+      type: object
+      required:
+        - success
+        - error
+        - requestId
+      properties:
+        success:
+          type: boolean
+          description: Always false for error responses
+          example: false
+
+        error:
+          type: string
+          description: Error type
+          example: Validation error
+
+        details:
+          type: array
+          description: Array of validation errors with paths and messages
+          items:
+            type: object
+            required:
+              - path
+              - message
+            properties:
+              path:
+                type: array
+                items:
+                  type: string
+                description: Path to the invalid field
+                example: ['channelName']
+
+              message:
+                type: string
+                description: Validation error message
+                example: Required
+
+              code:
+                type: string
+                description: Error code for programmatic handling
+
+        requestId:
+          type: string
+          format: uuid
+          description: Unique request identifier
+
+    UnauthorizedError:
+      type: object
+      required:
+        - error
+        - message
+      properties:
+        error:
+          type: string
+          description: Error type
+          example: Unauthorized
+
+        message:
+          type: string
+          description: Human-readable error message
+          example: Invalid or missing authentication credentials
+
+    RateLimitError:
+      type: object
+      required:
+        - success
+        - error
+        - requestId
+      properties:
+        success:
+          type: boolean
+          example: false
+
+        error:
+          type: string
+          example: Rate limit exceeded
+
+        message:
+          type: string
+          example: Too many requests. Please try again later.
+
+        requestId:
+          type: string
+          format: uuid
+
+    ServerError:
+      type: object
+      required:
+        - success
+        - error
+        - requestId
+      properties:
+        success:
+          type: boolean
+          example: false
+
+        error:
+          type: string
+          description: Error message
+          example: Failed to create event
+
+        requestId:
+          type: string
+          format: uuid
+          description: Request ID for support reference
+
+    IdentifyUserRequest:
+      type: object
+      required:
+        - user_id
+      properties:
+        user_id:
+          type: string
+          minLength: 1
+          maxLength: 255
+          description: |
+            Unique identifier for the user. This is your internal user ID.
+            Must be consistent across identify calls for the same user.
+          example: user_123
+
+        properties:
+          type: object
+          additionalProperties: true
+          description: |
+            Custom properties about the user. Any valid JSON structure is accepted.
+            Properties are **replaced** on each identify call, not merged.
+            Common properties: email, name, plan, createdAt, etc.
+          example:
+            email: john@example.com
+            name: John Doe
+            plan: pro
+            signupDate: '2025-01-15'
+
+        aliases:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            maxLength: 255
+          maxItems: 50
+          description: |
+            Array of alternative identifiers for this user (emails, usernames, external IDs).
+            Aliases allow you to reference users by multiple identifiers in your events.
+            Duplicate aliases are silently ignored and returned in the response.
+          example:
+            - john@example.com
+            - johndoe
+            - john.doe@company.com
+
+    IdentifyUserResponse:
+      type: object
+      required:
+        - success
+        - data
+        - requestId
+      properties:
+        success:
+          type: boolean
+          description: Indicates successful user identification
+          example: true
+
+        data:
+          type: object
+          required:
+            - id
+            - userId
+            - properties
+            - aliases
+            - updatedAt
+          properties:
+            id:
+              type: string
+              description: Unique identifier for this user identity record
+              example: user_identity_xxxxxxxxxxxxxxxxxxxxx
+
+            userId:
+              type: string
+              description: The user ID that was identified
+              example: user_123
+
+            properties:
+              type: object
+              additionalProperties: true
+              description: User properties that were stored
+              example:
+                email: john@example.com
+                name: John Doe
+                plan: pro
+
+            aliases:
+              type: object
+              required:
+                - created
+              properties:
+                created:
+                  type: array
+                  items:
+                    type: string
+                  description: Aliases that were successfully created
+                  example:
+                    - john@example.com
+                    - johndoe
+
+                failed:
+                  type: array
+                  items:
+                    type: object
+                    required:
+                      - alias
+                      - reason
+                    properties:
+                      alias:
+                        type: string
+                        description: The alias that failed to be created
+                      reason:
+                        type: string
+                        description: Why the alias creation failed
+                  description: Aliases that failed to be created (only present if there were failures)
+                  example:
+                    - alias: duplicate@example.com
+                      reason: Alias already exists
+
+            updatedAt:
+              type: string
+              format: date-time
+              description: ISO 8601 timestamp of when the identity was last updated
+              example: '2025-01-15T10:30:00.000Z'
+
+        requestId:
+          type: string
+          format: uuid
+          description: Unique request identifier for debugging and support
+          example: a1b2c3d4-e5f6-7890-abcd-ef1234567890

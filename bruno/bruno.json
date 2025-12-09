@@ -1,0 +1,6 @@
+{
+	"version": "1",
+	"name": "EmitKit",
+	"type": "collection",
+	"ignore": ["node_modules", ".git"]
+}

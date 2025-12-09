@@ -1,0 +1,68 @@
+DESCRIPTION >
+    Get aggregated event statistics for dashboards.
+    Returns total events, unique users, and tag distribution.
+    Automatically enforces retention policy based on event's retention_tier.
+    Supports filtering by organization, channel, and date range.
+
+TOKEN "dashboard" READ
+
+NODE event_stats
+SQL >
+    %
+    WITH
+        stats AS (
+            SELECT
+                count() as total_events,
+                uniq(user_id) as unique_users
+            FROM events
+            WHERE
+                organization_id = {{ String(organization_id, required=True) }}
+                -- Retention filtering based on tier (no JOIN!)
+                AND (
+                    (retention_tier = 'basic' AND created_at >= now() - INTERVAL 90 DAY)
+                    OR (retention_tier = 'premium' AND created_at >= now() - INTERVAL 365 DAY)
+                    OR retention_tier = 'unlimited'
+                )
+                {% if defined(channel_id) %}
+                    AND channel_id = {{ String(channel_id) }}
+                {% end %}
+                {% if defined(date_from) %}
+                    AND created_at >= {{ DateTime(date_from) }}
+                {% end %}
+                {% if defined(date_to) %}
+                    AND created_at <= {{ DateTime(date_to) }}
+                {% end %}
+        ),
+        tag_counts AS (
+            SELECT
+                arrayJoin(tags) as tag,
+                count() as count
+            FROM events
+            WHERE
+                organization_id = {{ String(organization_id, required=True) }}
+                -- Retention filtering based on tier (no JOIN!)
+                AND (
+                    (retention_tier = 'basic' AND created_at >= now() - INTERVAL 90 DAY)
+                    OR (retention_tier = 'premium' AND created_at >= now() - INTERVAL 365 DAY)
+                    OR retention_tier = 'unlimited'
+                )
+                {% if defined(channel_id) %}
+                    AND channel_id = {{ String(channel_id) }}
+                {% end %}
+                {% if defined(date_from) %}
+                    AND created_at >= {{ DateTime(date_from) }}
+                {% end %}
+                {% if defined(date_to) %}
+                    AND created_at <= {{ DateTime(date_to) }}
+                {% end %}
+            GROUP BY tag
+        )
+    SELECT
+        stats.total_events,
+        stats.unique_users,
+        groupArray(tuple(tag, count)) as tags_distribution
+    FROM stats
+    CROSS JOIN tag_counts
+    GROUP BY stats.total_events, stats.unique_users
+
+TYPE endpoint

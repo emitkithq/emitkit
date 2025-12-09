@@ -1,0 +1,126 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - README.md
+      - '.vscode/**'
+      - 'docs/**'
+      - '*.md'
+
+  pull_request:
+    paths-ignore:
+      - README.md
+      - '.vscode/**'
+      - 'docs/**'
+      - '*.md'
+
+env:
+  NODE_ENV: test
+  # Core test environment variables - matches .env.test
+  PUBLIC_SITE_URL: 'http://localhost:4173'
+  DATABASE_URL: 'postgresql://testuser:testpassword@localhost:5432/jobboard_test'
+  BETTER_AUTH_SECRET: 'test-secret-key-for-ci-minimum-32-chars-required'
+  PAYMENT_ADAPTER: 'test'
+  # Mock environment variables for type checking
+  VERCEL_URL: 'http://localhost:5173'
+  PUBLIC_VAPID_KEY: 'mock-vapid-public-key'
+  VAPID_KEY: 'mock-vapid-private-key'
+  VAPID_SUBJECT: 'mailto:test@example.com'
+  OPENROUTER_API_KEY: 'mock-openrouter-key'
+  TINYBIRD_TOKEN: 'mock-tinybird-token'
+  TINYBIRD_API_URL: 'https://api.tinybird.co'
+  UPSTASH_REDIS_REST_TOKEN: 'mock-redis-token'
+  UPSTASH_REDIS_REST_URL: 'https://mock-redis.upstash.io'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.number || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  Check:
+    name: Run svelte-check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run TypeScript checks
+        run: pnpm check
+
+  Lint:
+    runs-on: ubuntu-latest
+    name: Lint
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - run: pnpm lint
+
+  Test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: testuser
+          POSTGRES_PASSWORD: testpassword
+          POSTGRES_DB: jobboard_test
+        options: >-
+          --health-cmd "pg_isready -U testuser -d jobboard_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Setup test database
+        run: NODE_ENV=test pnpm run db:push --force
+
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Run unit tests
+        run: pnpm test:unit -- --run
+
+      - name: Run E2E tests
+        run: pnpm test:e2e
+
+      - name: Upload Playwright report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 30

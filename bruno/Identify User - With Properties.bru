@@ -1,0 +1,25 @@
+meta {
+  name: Identify User - With Properties
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{api_url}}/v1/identify
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "user_id": "user_456",
+    "properties": {
+      "email": "john.doe@example.com",
+      "name": "John Doe",
+      "plan": "pro",
+      "signupDate": "2025-01-15",
+      "company": "Acme Corp",
+      "role": "Engineering Manager"
+    }
+  }
+}

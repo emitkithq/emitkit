@@ -1,0 +1,7 @@
+apis:
+  emitkit@v1:
+    root: openapi/openapi.yaml
+
+rules:
+  no-server-example.com: off # Allow localhost for development server
+  operation-4xx-response: warn # Warn but don't fail on missing 4XX responses

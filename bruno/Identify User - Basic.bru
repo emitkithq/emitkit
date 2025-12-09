@@ -1,0 +1,17 @@
+meta {
+  name: Identify User - Basic
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{api_url}}/v1/identify
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "user_id": "user_123"
+  }
+}

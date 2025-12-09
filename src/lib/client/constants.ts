@@ -1,0 +1,4 @@
+export const DEFAULT_CLASSES = {
+	APP_CONTENT_PADDING_X: 'px-6',
+	APP_CONTENT_PADDING_R: 'pr-4'
+};

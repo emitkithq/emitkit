@@ -1,0 +1,40 @@
+DESCRIPTION >
+    Get aggregated event statistics by folder.
+    Automatically enforces retention policy based on event's retention_tier.
+    Useful for folder-level analytics dashboards.
+    Hierarchy: organization -> folder -> channel -> event
+
+TOKEN "dashboard" READ
+
+NODE folder_events
+SQL >
+    %
+    SELECT
+        project_id,
+        count() as event_count,
+        uniq(user_id) as unique_users,
+        uniq(channel_id) as channel_count,
+        min(created_at) as first_event,
+        max(created_at) as last_event
+    FROM events
+    WHERE
+        organization_id = {{ String(organization_id, required=True) }}
+        -- Retention filtering based on tier (no JOIN!)
+        AND (
+            (retention_tier = 'basic' AND created_at >= now() - INTERVAL 90 DAY)
+            OR (retention_tier = 'premium' AND created_at >= now() - INTERVAL 365 DAY)
+            OR retention_tier = 'unlimited'
+        )
+        {% if defined(project_id) %}
+            AND project_id = {{ String(project_id) }}
+        {% end %}
+        {% if defined(date_from) %}
+            AND created_at >= {{ DateTime(date_from) }}
+        {% end %}
+        {% if defined(date_to) %}
+            AND created_at <= {{ DateTime(date_to) }}
+        {% end %}
+    GROUP BY project_id
+    ORDER BY event_count DESC
+
+TYPE endpoint

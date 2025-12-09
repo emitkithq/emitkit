@@ -1,0 +1,17 @@
+DESCRIPTION >
+    Daily aggregated event metrics materialized view.
+    Pre-aggregates event counts and unique users by day.
+
+SCHEMA >
+    `day` Date,
+    `organization_id` String,
+    `channel_id` String,
+    `event_count` SimpleAggregateFunction(sum, UInt64),
+    `unique_users` AggregateFunction(uniq, String)
+
+FORWARD_QUERY >
+    SELECT *
+
+ENGINE "AggregatingMergeTree"
+ENGINE_PARTITION_KEY "toYYYYMM(day)"
+ENGINE_SORTING_KEY "organization_id, channel_id, day"

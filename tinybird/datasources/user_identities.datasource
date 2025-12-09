@@ -1,0 +1,20 @@
+DESCRIPTION >
+    User identities with properties and aliases.
+    Single source of truth for all user data.
+    Uses ReplacingMergeTree for upsert semantics based on updated_at version.
+
+SCHEMA >
+    `id` String `json:$.id`,
+    `organization_id` String `json:$.organization_id`,
+    `user_id` String `json:$.user_id`,
+    `email` String `json:$.email`,
+    `name` String `json:$.name`,
+    `properties` String `json:$.properties`,
+    `aliases` Array(String) `json:$.aliases[:]`,
+    `created_at` DateTime64(3) `json:$.created_at`,
+    `updated_at` DateTime64(3) `json:$.updated_at`
+
+ENGINE "ReplacingMergeTree"
+ENGINE_VERSION "updated_at"
+ENGINE_PARTITION_KEY "toYYYYMM(created_at)"
+ENGINE_SORTING_KEY "organization_id, user_id, updated_at"

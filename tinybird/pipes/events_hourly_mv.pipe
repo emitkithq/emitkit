@@ -1,0 +1,17 @@
+DESCRIPTION >
+    Materialized pipe to aggregate events per hour.
+    Creates hourly aggregations for faster dashboard queries.
+
+NODE hourly_aggregation
+SQL >
+    SELECT
+        toStartOfHour(created_at) AS hour,
+        organization_id,
+        channel_id,
+        count() AS event_count,
+        uniqState(user_id) AS unique_users
+    FROM events
+    GROUP BY hour, organization_id, channel_id
+
+TYPE MATERIALIZED
+DATASOURCE events_hourly_agg

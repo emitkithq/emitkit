@@ -1,0 +1,36 @@
+DESCRIPTION >
+    User cohort analysis grouped by signup period.
+    Shows user counts and engagement metrics by cohort.
+
+TOKEN "user_cohorts_endpoint" READ
+
+NODE cohort_analysis
+SQL >
+    %
+    SELECT
+        toStartOfMonth(created_at) as cohort_month,
+        count(DISTINCT user_id) as user_count,
+        countIf(JSONExtractString(properties, 'plan') = 'pro') as pro_users,
+        countIf(JSONExtractString(properties, 'plan') = 'free') as free_users,
+        countIf(JSONExtractString(properties, 'plan') = 'enterprise') as enterprise_users
+    FROM (
+        SELECT
+            organization_id,
+            user_id,
+            properties,
+            created_at,
+            ROW_NUMBER() OVER (PARTITION BY organization_id, user_id ORDER BY updated_at DESC) as rn
+        FROM user_identities
+        WHERE organization_id = {{ String(organization_id, required=True) }}
+          {% if defined(date_from) %}
+            AND created_at >= {{ DateTime(date_from) }}
+          {% end %}
+          {% if defined(date_to) %}
+            AND created_at <= {{ DateTime(date_to) }}
+          {% end %}
+    )
+    WHERE rn = 1
+    GROUP BY cohort_month
+    ORDER BY cohort_month DESC
+
+TYPE endpoint

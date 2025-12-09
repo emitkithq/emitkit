@@ -1,0 +1,51 @@
+DESCRIPTION >
+    Funnel analysis segmented by user properties.
+    Track conversion rates through event sequences by user segment (plan, source, etc).
+
+TOKEN "funnel_by_segment_endpoint" READ
+
+NODE segment_funnel
+SQL >
+    %
+    WITH latest_users AS (
+        SELECT
+            organization_id,
+            user_id,
+            email,
+            name,
+            properties,
+            ROW_NUMBER() OVER (PARTITION BY organization_id, user_id ORDER BY updated_at DESC) as rn
+        FROM user_identities
+        WHERE organization_id = {{ String(organization_id, required=True) }}
+    ),
+    user_events AS (
+        SELECT
+            e.user_id,
+            e.title as event_name,
+            e.created_at,
+            JSONExtractString(u.properties, {{ String(segment_by, 'plan') }}) as segment
+        FROM events e
+        INNER JOIN latest_users u
+            ON e.organization_id = u.organization_id
+            AND e.user_id = u.user_id
+            AND u.rn = 1
+        WHERE e.organization_id = {{ String(organization_id, required=True) }}
+          AND e.channel_id = {{ String(channel_id, required=True) }}
+          {% if defined(date_from) %}
+            AND e.created_at >= {{ DateTime(date_from) }}
+          {% end %}
+          {% if defined(date_to) %}
+            AND e.created_at <= {{ DateTime(date_to) }}
+          {% end %}
+    )
+    SELECT
+        segment,
+        event_name,
+        count(DISTINCT user_id) as unique_users,
+        count(*) as total_events
+    FROM user_events
+    WHERE event_name IN ({{ Array(funnel_steps, 'String', required=True) }})
+    GROUP BY segment, event_name
+    ORDER BY segment, event_name
+
+TYPE endpoint
