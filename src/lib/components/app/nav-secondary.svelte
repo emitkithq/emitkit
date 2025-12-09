@@ -22,7 +22,7 @@
 	} = $props();
 
 	// Track which items are open
-	let openItems = new SvelteSet<string>();
+	let openItems = $state(new SvelteSet<string>());
 
 	function toggleItem(title: string) {
 		if (openItems.has(title)) {

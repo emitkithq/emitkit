@@ -87,7 +87,10 @@
 									<Breadcrumb.Item class="hidden md:block">
 										<Breadcrumb.Link
 											href={c.url}
-											class={cn(c.url === page.url && 'text-foreground', 'flex items-center gap-2')}
+											class={cn(
+												c.url === page.url.pathname && 'text-foreground',
+												'flex items-center gap-2'
+											)}
 										>
 											{#if c.metadata?.iconUrl}
 												<Avatar.Root class="h-4 w-4">

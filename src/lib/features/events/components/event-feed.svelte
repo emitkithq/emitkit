@@ -182,7 +182,6 @@
 								{organizationId}
 								onDeleted={() => handleEventDeleted(event.id)}
 								projectName={project?.name}
-								projectSlug={project?.slug}
 								channelName={channel?.name}
 								{showChannelContext}
 							/>

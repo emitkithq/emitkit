@@ -17,6 +17,11 @@
 
 	let { data, children } = $props();
 
+	// Set site config immediately (before useSiteConfig is called)
+	// This intentionally captures the initial value to set context before children render
+	// The warning about capturing initial value is expected - we want both initial set and reactive updates
+	// svelte-ignore state_referenced_locally
+	setSiteConfig(data.config);
 	const config = useSiteConfig();
 
 	// Update site config reactively when data changes

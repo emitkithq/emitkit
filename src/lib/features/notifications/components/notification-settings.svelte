@@ -25,7 +25,7 @@
 	const manager = createNotificationManager();
 
 	// Local state that syncs with currentSubscription prop
-	let subscribedChannels = new SvelteSet<string>();
+	let subscribedChannels = $state(new SvelteSet<string>());
 	let subscribeToAll = $state(false);
 
 	// Sync local state when currentSubscription changes
