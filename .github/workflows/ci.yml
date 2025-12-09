@@ -34,6 +34,17 @@ env:
   TINYBIRD_API_URL: 'https://api.tinybird.co'
   UPSTASH_REDIS_REST_TOKEN: 'mock-redis-token'
   UPSTASH_REDIS_REST_URL: 'https://mock-redis.upstash.io'
+  # QStash (Upstash Workflow) mock variables
+  QSTASH_TOKEN: 'mock-qstash-token'
+  QSTASH_URL: 'https://qstash.upstash.io'
+  # Bento email service mock variables
+  BENTO_DEFAULT_FROM: 'test@example.com'
+  BENTO_REPLY_TO: 'reply@example.com'
+  BENTO_PUBLISHABLE_KEY: 'mock-bento-publishable-key'
+  BENTO_SECRET_KEY: 'mock-bento-secret-key'
+  BENTO_SITE_UUID: 'mock-bento-site-uuid'
+  # Encryption key mock variable
+  ENCRYPTION_KEY: 'mock-encryption-key-32-characters!'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.number || github.sha }}
