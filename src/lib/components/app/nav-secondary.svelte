@@ -22,6 +22,7 @@
 	} = $props();
 
 	// Track which items are open
+	// eslint-disable-next-line svelte/no-unnecessary-state-wrap
 	let openItems = $state(new SvelteSet<string>());
 
 	function toggleItem(title: string) {

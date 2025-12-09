@@ -39,8 +39,8 @@ importers:
         specifier: ^3.0.4
         version: 3.0.4
       '@stacksee/analytics':
-        specifier: ^0.9.8
-        version: 0.9.8
+        specifier: ^0.13.0
+        version: 0.13.0
       '@svelte-put/async-stack':
         specifier: ^1.5.3
         version: 1.5.3(svelte@5.45.5)
@@ -943,6 +943,9 @@ packages:
 
   '@drizzle-team/brocli@0.10.2':
     resolution: {integrity: sha512-z33Il7l5dKjUgGULTqBsQBQwckHh5AbIuxhdsIxDDiZAzBOrZO6q9ogcWC65kU382AfynTfgNumVcNIjuIua6w==}
+
+  '@emitkit/js@2.1.0':
+    resolution: {integrity: sha512-M/O3e2StARdpt8hYa+mOq++nFpwghoPaxvOmM0xmRe9RyIGAkEcKRcQcXJwsQTOryXSi9cj0kWMQeXMRlNFgiA==}
 
   '@emoji-mart/data@1.2.1':
     resolution: {integrity: sha512-no2pQMWiBy6gpBEiqGeU77/bFejDqUTRY7KX+0+iur13op3bqUsXdnwoZs6Xb1zbv0gAj5VvS1PWoUUckSr5Dw==}
@@ -2334,8 +2337,8 @@ packages:
   '@stablelib/base64@1.0.1':
     resolution: {integrity: sha512-1bnPQqSxSuc3Ii6MhBysoWCg58j97aUjuCSZrGSmDxNqtytIi0k8utUenAwTZN4V5mXXYGsVUI9zeBqy+jBOSQ==}
 
-  '@stacksee/analytics@0.9.8':
-    resolution: {integrity: sha512-goP675USqVzBiTDdj26uOwbQHRDxutJ4DMlV/B6hzwUegForjp0Poz90wHMZcEC1zm18rPNx7aQepFa9yge+1w==}
+  '@stacksee/analytics@0.13.0':
+    resolution: {integrity: sha512-RBRuZ1ASPhupV6Rm4m0qITTxk7q5S8TWO3bO6AF0NrO3/oZppHjXJUqwE7BDyJSESMDSmmbQD1jOcqSjkpenIw==}
     engines: {node: '>=20', pnpm: '>=9.0.0'}
 
   '@standard-schema/spec@1.0.0':
@@ -2604,8 +2607,8 @@ packages:
   '@types/node@22.19.1':
     resolution: {integrity: sha512-LCCV0HdSZZZb34qifBsyWlUmok6W7ouER+oQIGBScS8EsZsQbrtFTUrDX4hOl+CS6p7cnNC4td+qrSVGSCTUfQ==}
 
-  '@types/node@24.10.1':
-    resolution: {integrity: sha512-GNWcUTRBgIRJD5zj+Tq0fKOJ5XZajIiBroOF0yvj2bSU1WvNdYS/dn9UxwsujGW4JX06dnHyjV2y9rRaybH0iQ==}
+  '@types/node@24.10.2':
+    resolution: {integrity: sha512-WOhQTZ4G8xZ1tjJTvKOpyEVSGgOTvJAfDK3FNFgELyaTpzhdgHVHeqW8V+UJvzF5BT+/B54T/1S2K6gd9c7bbA==}
 
   '@types/pg@8.15.6':
     resolution: {integrity: sha512-NoaMtzhxOrubeL/7UZuNTrejB4MPAJ0RpxZqXQf2qXuVlTPuG6Y8p4u9dKRaue4yjmC7ZhzVO2/Yyyn25znrPQ==}
@@ -8448,6 +8451,9 @@ snapshots:
 
   '@drizzle-team/brocli@0.10.2': {}
 
+  '@emitkit/js@2.1.0':
+    optional: true
+
   '@emoji-mart/data@1.2.1': {}
 
   '@emotion/is-prop-valid@1.2.2':
@@ -9975,9 +9981,10 @@ snapshots:
   '@stablelib/base64@1.0.1':
     optional: true
 
-  '@stacksee/analytics@0.9.8':
+  '@stacksee/analytics@0.13.0':
     optionalDependencies:
       '@bentonow/bento-node-sdk': 0.2.1
+      '@emitkit/js': 2.1.0
       pirsch-sdk: 2.9.1
       posthog-js: 1.302.2
       posthog-node: 5.17.2
@@ -10268,7 +10275,7 @@ snapshots:
     dependencies:
       undici-types: 6.21.0
 
-  '@types/node@24.10.1':
+  '@types/node@24.10.2':
     dependencies:
       undici-types: 7.16.0
     optional: true
@@ -13605,7 +13612,7 @@ snapshots:
 
   pirsch-sdk@2.9.1:
     dependencies:
-      '@types/node': 24.10.1
+      '@types/node': 24.10.2
       axios: 1.13.2
     transitivePeerDependencies:
       - debug

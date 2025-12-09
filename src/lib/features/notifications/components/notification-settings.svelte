@@ -25,6 +25,7 @@
 	const manager = createNotificationManager();
 
 	// Local state that syncs with currentSubscription prop
+	// eslint-disable-next-line svelte/no-unnecessary-state-wrap
 	let subscribedChannels = $state(new SvelteSet<string>());
 	let subscribeToAll = $state(false);
 
