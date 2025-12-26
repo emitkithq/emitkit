@@ -5,5 +5,4 @@
 	let { params }: PageProps = $props();
 </script>
 
-hello
 <OrganizationView path={params.path} />
