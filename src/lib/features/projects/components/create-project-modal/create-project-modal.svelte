@@ -8,7 +8,8 @@
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import * as Alert from '$lib/components/ui/alert/index.js';
 	import { useCurrentOrganization } from 'better-auth-ui-svelte';
-	import { page } from '$app/state';
+	import { authClient } from '$lib/client/auth/auth-client';
+	import { fromStore } from '$lib/utils/store-to-rune.svelte';
 
 	// Props interface
 	interface Props {
@@ -24,10 +25,11 @@
 	}: StackItemProps<{ success: boolean; projectId?: string }> & Props = $props();
 
 	const organization = useCurrentOrganization();
+	const session = fromStore(authClient.useSession());
 
 	// Get organization and user IDs from props or current context
 	const organizationId = $derived(propOrgId ?? organization.data?.id ?? '');
-	const userId = $derived(propUserId ?? page.data.user?.id ?? '');
+	const userId = $derived(propUserId ?? session.value?.data?.user?.id ?? '');
 
 	// State
 	let isSubmitting = $state(false);
