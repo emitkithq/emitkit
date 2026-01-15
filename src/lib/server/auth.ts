@@ -204,7 +204,7 @@ export const auth = betterAuth({
 					}
 
 					// Detect if request is from mobile device
-					const userAgent = request?.headers.get('user-agent') || '';
+					const userAgent = request?.headers?.get('user-agent') || '';
 					const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
 						userAgent
 					);
