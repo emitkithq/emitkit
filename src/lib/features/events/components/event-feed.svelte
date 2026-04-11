@@ -1,9 +1,8 @@
 <script lang="ts">
-	import type { PaginatedResult } from '$lib/features/events/types';
-	import type { Event } from '$lib/server/db/schema';
 	import type { Project } from '$lib/features/projects/types';
 	import type { Channel } from '$lib/features/channels/types';
 	import EventListItem from '$lib/features/events/components/event-list-item.svelte';
+	import EventFeedSkeleton from '$lib/features/events/components/event-feed-skeleton.svelte';
 	import { Wrapper } from '$lib/components/ui/wrapper';
 	import {
 		getTimeGroup,
@@ -13,12 +12,12 @@
 		type GroupedEvents
 	} from '$lib/features/events/utils/time-grouping';
 	import { SvelteSet, SvelteMap } from 'svelte/reactivity';
-	import { orpc } from '$lib/config/rpc-client';
+	import { api, orpc } from '$lib/config/rpc-client';
+	import { createQuery } from '@tanstack/svelte-query';
 	import { consumeEventIterator } from '@orpc/client';
 
 	let {
 		organizationId,
-		initialEvents,
 		sites,
 		channels,
 		channelId,
@@ -26,7 +25,6 @@
 		showChannelContext = false
 	}: {
 		organizationId: string;
-		initialEvents: PaginatedResult<Event>;
 		sites: Project[];
 		channels: Channel[];
 		channelId?: string;
@@ -34,19 +32,38 @@
 		showChannelContext?: boolean;
 	} = $props();
 
+	// TanStack Query — cached events load, stale-while-revalidate
+	const eventsQuery = createQuery(() =>
+		channelId
+			? api.events.list.queryOptions({
+					input: { channelId, organizationId, page: 1, limit: 20 }
+				})
+			: api.events.listByOrg.queryOptions({
+					input: { organizationId, projectId, page: 1, limit: 20 }
+				})
+	);
+
 	// Track loaded event IDs to prevent duplicates
 	let loadedEventIds = new SvelteSet<string>();
 
-	// Initialize with server-loaded events (not marked as new)
-	let allEvents = $state<EventWithNewStatus[]>([]);
+	// Merge query data with streamed events
+	let streamedEvents = $state<EventWithNewStatus[]>([]);
 
-	// React to initialEvents prop changes (when navigating or filtering)
+	// Reset streamed events when query data changes (navigation)
 	$effect(() => {
-		if (initialEvents && initialEvents.items) {
-			loadedEventIds = new SvelteSet(initialEvents.items.map((event) => event.id));
-			allEvents = initialEvents.items;
+		if (eventsQuery.data?.items) {
+			loadedEventIds = new SvelteSet(eventsQuery.data.items.map((event) => event.id));
+			streamedEvents = [];
 		}
 	});
+
+	// All events = query data + streamed new events
+	const allEvents = $derived<EventWithNewStatus[]>([
+		...streamedEvents,
+		...(eventsQuery.data?.items ?? [])
+	]);
+
+	const isLoading = $derived(eventsQuery.isLoading);
 
 	// Create maps for channel and project lookups (reactive to prop changes)
 	const projectMap = $derived(new SvelteMap(sites.map((project) => [project.id, project])));
@@ -54,7 +71,7 @@
 
 	// Handle event deletion
 	function handleEventDeleted(eventId: string) {
-		allEvents = allEvents.filter((event) => event.id !== eventId);
+		streamedEvents = streamedEvents.filter((event) => event.id !== eventId);
 		loadedEventIds.delete(eventId);
 	}
 
@@ -105,7 +122,7 @@
 					// Only add if we haven't seen this event before
 					if (!loadedEventIds.has(event.id)) {
 						loadedEventIds.add(event.id);
-						allEvents = [event, ...allEvents];
+						streamedEvents = [event, ...streamedEvents];
 					}
 				}
 			},
@@ -119,7 +136,7 @@
 			const currentTime = Date.now();
 			const thirtySecondsAgo = currentTime - 30000;
 
-			allEvents = allEvents.map((event) => {
+			streamedEvents = streamedEvents.map((event) => {
 				if (event.isNew && event.streamedAt && event.streamedAt < thirtySecondsAgo) {
 					return { ...event, isNew: false };
 				}
@@ -136,7 +153,9 @@
 </script>
 
 <Wrapper alignment="center">
-	{#if allEvents.length === 0}
+	{#if isLoading}
+		<EventFeedSkeleton />
+	{:else if allEvents.length === 0}
 		<div class="flex flex-col items-center justify-center gap-4 py-12 text-center">
 			<div class="rounded-full bg-muted p-6">
 				<svg

@@ -147,7 +147,7 @@
 {#if data.orgId && widgetCollapsed && !widgetDismissed && data.defaultSite}
 	<OnboardingWidget
 		defaultSite={data.defaultSite}
-		hasEvents={data.hasEvents}
+		hasEvents={data.hasEvents ?? false}
 		organizationId={data.orgId}
 		placement="floating"
 		onExpand={handleWidgetExpand}

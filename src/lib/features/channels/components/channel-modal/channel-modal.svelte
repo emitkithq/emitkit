@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { StackItemProps } from '@svelte-put/async-stack';
-	import { orpc } from '$lib/config/rpc-client';
+	import { orpc, api } from '$lib/config/rpc-client';
+	import { createMutation, useQueryClient } from '@tanstack/svelte-query';
 	import * as Field from '$lib/components/ui/field/index.js';
 	import { Textarea } from '$lib/components/ui/textarea/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
@@ -34,7 +35,7 @@
 	let emojiPickerOpen = $state(false);
 	let emojiPickerMounted = $state(false);
 	let isSuggestingEmoji = $state(false);
-	let isSubmitting = $state(false);
+	const queryClient = useQueryClient();
 	let errors = $state<Record<string, string>>({});
 
 	// Mount emoji picker on first open to defer heavy initialization
@@ -70,6 +71,19 @@
 		item.resolve({ success: false });
 	}
 
+	const createChannelMut = createMutation(() =>
+		api.channels.create.mutationOptions({
+			onError: (err) => {
+				errors.form = err.message || 'Failed to create channel';
+			},
+			onSettled: () => {
+				queryClient.invalidateQueries({ queryKey: api.channels.listByOrg.key() });
+			}
+		})
+	);
+
+	const isSubmitting = $derived(createChannelMut.isPending);
+
 	// Handle submit
 	async function handleSubmit(e: SubmitEvent) {
 		e.preventDefault();
@@ -80,10 +94,8 @@
 			return;
 		}
 
-		isSubmitting = true;
-
 		try {
-			const channel = await orpc.channels.create({
+			const channel = await createChannelMut.mutateAsync({
 				projectId,
 				organizationId,
 				name: name.trim(),
@@ -95,10 +107,8 @@
 				success: true,
 				channelId: channel.id
 			});
-		} catch (error) {
-			console.error('Failed to create channel:', error);
-			errors.form = error instanceof Error ? error.message : 'Failed to create channel';
-			isSubmitting = false;
+		} catch {
+			// Error handled by onError callback
 		}
 	}
 </script>

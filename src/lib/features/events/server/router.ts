@@ -27,6 +27,20 @@ const list = authed
 		});
 	});
 
+const listByOrg = authed
+	.input(
+		paginationParamsSchema.extend({
+			organizationId: z.string(),
+			projectId: z.string().optional()
+		})
+	)
+	.handler(async ({ input }) => {
+		return await listEventsByOrg(input.organizationId, {
+			page: input.page,
+			limit: input.limit
+		}, input.projectId);
+	});
+
 const remove = authed
 	.input(
 		z.object({
@@ -165,6 +179,7 @@ const streamByChannel = authed
 
 export const eventsRouter = {
 	list,
+	listByOrg,
 	delete: remove,
 	streamByOrg,
 	streamByChannel

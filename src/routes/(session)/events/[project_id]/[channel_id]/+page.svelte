@@ -30,7 +30,6 @@
 <Wrapper alignment="center">
 	<EventFeed
 		organizationId={data.orgId}
-		initialEvents={data.events}
 		sites={data.projects}
 		channels={data.channels}
 		channelId={data.channelId}

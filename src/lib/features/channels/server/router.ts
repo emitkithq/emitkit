@@ -6,7 +6,8 @@ import {
 	deleteChannel,
 	getChannelByIdAndOrg,
 	listChannels,
-	listChannelsByFolder
+	listChannelsByFolder,
+	listChannelsByOrg
 } from '$lib/features/channels/server/repository';
 import { createOpenRouter } from '@openrouter/ai-sdk-provider';
 import { generateText, wrapLanguageModel } from 'ai';
@@ -26,6 +27,21 @@ const list = authed
 	)
 	.handler(async ({ input }) => {
 		return await listChannels(input.organizationId, {
+			page: input.page,
+			limit: input.limit
+		});
+	});
+
+const listByOrg = authed
+	.input(
+		z.object({
+			organizationId: z.string(),
+			page: z.number().int().positive().default(1).optional(),
+			limit: z.number().int().positive().max(500).default(200).optional()
+		})
+	)
+	.handler(async ({ input }) => {
+		return await listChannelsByOrg(input.organizationId, {
 			page: input.page,
 			limit: input.limit
 		});
@@ -139,6 +155,7 @@ Return ONLY a single emoji character that best fits "${input.channelName}". Do n
 
 export const channelsRouter = {
 	list,
+	listByOrg,
 	listByFolder,
 	create,
 	delete: remove,

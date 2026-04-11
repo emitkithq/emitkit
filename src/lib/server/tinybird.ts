@@ -28,10 +28,18 @@ export interface TinybirdIngestResponse {
 class TinybirdClient {
 	private token: string;
 	private baseUrl: string;
+	private static readonly FETCH_TIMEOUT_MS = 3000;
 
 	constructor(token: string, baseUrl: string = TINYBIRD_BASE_URL) {
 		this.token = token;
 		this.baseUrl = baseUrl;
+	}
+
+	private fetchWithTimeout(url: string, init: RequestInit): Promise<Response> {
+		return fetch(url, {
+			...init,
+			signal: AbortSignal.timeout(TinybirdClient.FETCH_TIMEOUT_MS)
+		});
 	}
 
 	/**
@@ -44,7 +52,7 @@ class TinybirdClient {
 	async ingestEvent(event: TinybirdEvent, wait: boolean = false): Promise<TinybirdIngestResponse> {
 		const url = `${this.baseUrl}/v0/events?name=events${wait ? '&wait=true' : ''}`;
 
-		const response = await fetch(url, {
+		const response = await this.fetchWithTimeout(url, {
 			method: 'POST',
 			headers: {
 				Authorization: `Bearer ${this.token}`,
@@ -77,7 +85,7 @@ class TinybirdClient {
 		// NDJSON format (one JSON object per line)
 		const ndjson = events.map((e) => JSON.stringify(e)).join('\n');
 
-		const response = await fetch(url, {
+		const response = await this.fetchWithTimeout(url, {
 			method: 'POST',
 			headers: {
 				Authorization: `Bearer ${this.token}`,
@@ -115,7 +123,7 @@ class TinybirdClient {
 
 		const contentType = Array.isArray(data) ? 'application/x-ndjson' : 'application/json';
 
-		const response = await fetch(url, {
+		const response = await this.fetchWithTimeout(url, {
 			method: 'POST',
 			headers: {
 				Authorization: `Bearer ${this.token}`,
@@ -157,7 +165,7 @@ class TinybirdClient {
 
 		const url = `${this.baseUrl}/v0/pipes/${pipeName}.${format}${queryString ? `?${queryString}` : ''}`;
 
-		const response = await fetch(url, {
+		const response = await this.fetchWithTimeout(url, {
 			method: 'GET',
 			headers: {
 				Authorization: `Bearer ${this.token}`
@@ -189,7 +197,7 @@ class TinybirdClient {
 	): Promise<T> {
 		const url = `${this.baseUrl}/v0/pipes/${pipeName}.json`;
 
-		const response = await fetch(url, {
+		const response = await this.fetchWithTimeout(url, {
 			method: 'POST',
 			headers: {
 				Authorization: `Bearer ${this.token}`,
@@ -216,7 +224,7 @@ class TinybirdClient {
 	async executeSQL<T = unknown>(sql: string): Promise<T> {
 		const url = `${this.baseUrl}/v0/sql`;
 
-		const response = await fetch(url, {
+		const response = await this.fetchWithTimeout(url, {
 			method: 'POST',
 			headers: {
 				Authorization: `Bearer ${this.token}`,
@@ -247,7 +255,7 @@ class TinybirdClient {
 	): Promise<{ id: string; job_id: string; status: string; delete_condition: string }> {
 		const url = `${this.baseUrl}/v0/datasources/${datasourceName}/delete`;
 
-		const response = await fetch(url, {
+		const response = await this.fetchWithTimeout(url, {
 			method: 'POST',
 			headers: {
 				Authorization: `Bearer ${this.token}`,

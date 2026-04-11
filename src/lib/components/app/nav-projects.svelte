@@ -7,7 +7,8 @@
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
 	import { FolderActionsMenu } from '$lib/components/app/project-actions';
 	import FolderFavicon from '$lib/components/app/folder-favicon.svelte';
-	import { orpc } from '$lib/config/rpc-client';
+	import { api } from '$lib/config/rpc-client';
+	import { createQuery, useQueryClient } from '@tanstack/svelte-query';
 	import { useCurrentOrganization } from 'better-auth-ui-svelte';
 	import { useModals } from '$lib/components/modal-stack/modal-stack-provider.svelte';
 	import { page } from '$app/state';
@@ -17,11 +18,11 @@
 
 	const organization = useCurrentOrganization();
 	const modals = useModals();
+	const queryClient = useQueryClient();
 
 	// Expansion strategy types
 	type ExpansionStrategy = 'EXPAND_ALL' | 'EXPAND_ACTIVE_AND_SMALL' | 'EXPAND_ACTIVE_ONLY';
 
-	// Helper function: Calculate expansion strategy based on content density
 	function calculateExpansionStrategy(
 		projects: Project[],
 		channels: Record<string, { items: Channel[]; loading: boolean }>
@@ -33,21 +34,11 @@
 			0
 		);
 
-		// Small content: expand everything (2-3 projects, 1-4 channels each)
-		if (totalProjects <= 3 && totalChannels <= 12) {
-			return 'EXPAND_ALL';
-		}
-
-		// Medium content: expand active + small projects
-		if (totalProjects <= 6 && maxChannelsInProject <= 8) {
-			return 'EXPAND_ACTIVE_AND_SMALL';
-		}
-
-		// Large content: expand only active
+		if (totalProjects <= 3 && totalChannels <= 12) return 'EXPAND_ALL';
+		if (totalProjects <= 6 && maxChannelsInProject <= 8) return 'EXPAND_ACTIVE_AND_SMALL';
 		return 'EXPAND_ACTIVE_ONLY';
 	}
 
-	// Helper function: Calculate which projects should be open
 	function calculateOpenProjects(
 		strategy: ExpansionStrategy,
 		projects: Project[],
@@ -57,271 +48,156 @@
 	): SvelteSet<string> {
 		const openSet = new SvelteSet<string>();
 
-		// Start with strategy-based defaults
 		switch (strategy) {
 			case 'EXPAND_ALL':
 				projects.forEach((p) => openSet.add(p.id));
 				break;
-
 			case 'EXPAND_ACTIVE_AND_SMALL':
 				projects.forEach((p) => {
 					const channelCount = channels[p.id]?.items.length || 0;
-					if (p.id === activeProjectId || channelCount <= 3) {
-						openSet.add(p.id);
-					}
+					if (p.id === activeProjectId || channelCount <= 3) openSet.add(p.id);
 				});
 				break;
-
 			case 'EXPAND_ACTIVE_ONLY':
-				if (activeProjectId) {
-					openSet.add(activeProjectId);
-				}
+				if (activeProjectId) openSet.add(activeProjectId);
 				break;
 		}
 
-		// Apply user overrides
 		Object.entries(userOverrides).forEach(([projectId, shouldBeOpen]) => {
-			if (shouldBeOpen) {
-				openSet.add(projectId);
-			} else {
-				openSet.delete(projectId);
-			}
+			if (shouldBeOpen) openSet.add(projectId);
+			else openSet.delete(projectId);
 		});
 
 		return openSet;
 	}
 
-	// Reactive state for projects - we'll update this manually
-	let projectsData = $state<Project[]>([]);
-	let deletedProjectsData = $state<Project[]>([]);
+	// TanStack Query — cached, deduplicated, stale-while-revalidate
+	const orgId = $derived(organization.data?.id);
 
-	// Reset user overrides when organization changes
-	$effect(() => {
-		if (organization.data?.id) {
-			userOverrides = {};
+	const projectsQuery = createQuery(() => ({
+		...api.projects.list.queryOptions({ input: { organizationId: orgId!, page: 1, limit: 50 } }),
+		enabled: !!orgId
+	}));
+
+	const channelsQuery = createQuery(() => ({
+		...api.channels.listByOrg.queryOptions({ input: { organizationId: orgId!, page: 1, limit: 200 } }),
+		enabled: !!orgId
+	}));
+
+	const deletedQuery = createQuery(() => ({
+		...api.projects.listDeleted.queryOptions({ input: { organizationId: orgId!, page: 1, limit: 50 } }),
+		enabled: !!orgId
+	}));
+
+	// Derive data from queries
+	const projectsData = $derived(projectsQuery.data?.items ?? []);
+	const deletedProjectsData = $derived(deletedQuery.data?.items ?? []);
+
+	// Group channels by projectId
+	const projectChannels = $derived.by(() => {
+		const channels: Record<string, { items: Channel[]; loading: boolean }> = {};
+		for (const project of projectsData) {
+			channels[project.id] = { items: [], loading: false };
 		}
-	});
-
-	// Fetch projects and all channels when organization changes
-	$effect(() => {
-		if (organization.data?.id) {
-			orpc.projects
-				.list({ organizationId: organization.data.id, page: 1, limit: 50 })
-				.then(async (data) => {
-					projectsData = data.items;
-
-					// Preload channels for all projects
-					const channelPromises = data.items.map((project) =>
-						orpc.channels
-							.listByFolder({ projectId: project.id, page: 1, limit: 50 })
-							.then((result) => ({ projectId: project.id, channels: result.items }))
-							.catch((error) => {
-								console.error(`Failed to load channels for project ${project.id}:`, error);
-								return { projectId: project.id, channels: [] };
-							})
-					);
-
-					const channelsResults = await Promise.all(channelPromises);
-
-					// Update projectChannels state
-					const newChannels: Record<string, { items: Channel[]; loading: boolean }> = {};
-					for (const result of channelsResults) {
-						newChannels[result.projectId] = { items: result.channels, loading: false };
-					}
-					projectChannels = newChannels;
-				});
-			orpc.projects
-				.listDeleted({ organizationId: organization.data.id, page: 1, limit: 50 })
-				.then((data) => {
-					deletedProjectsData = data.items;
-				});
+		if (channelsQuery.data?.items) {
+			for (const channel of channelsQuery.data.items) {
+				if (channels[channel.projectId]) {
+					channels[channel.projectId].items.push(channel);
+				}
+			}
 		}
+		return channels;
 	});
-
-	// State to track channels per project
-	let projectChannels = $state<Record<string, { items: Channel[]; loading: boolean }>>({});
 
 	// State to track user manual toggles
 	let userOverrides = $state<Record<string, boolean>>({});
 
-	// DERIVED: Compute which projects should be open based on content density and user overrides
+	// Reset user overrides when organization changes
+	$effect(() => {
+		if (orgId) {
+			userOverrides = {};
+		}
+	});
+
+	// DERIVED: Compute which projects should be open
 	let openProjects = $derived.by(() => {
 		const strategy = calculateExpansionStrategy(projectsData, projectChannels);
 		const activeProjectId = page.params.project_id;
-
-		return calculateOpenProjects(
-			strategy,
-			projectsData,
-			projectChannels,
-			activeProjectId,
-			userOverrides
-		);
+		return calculateOpenProjects(strategy, projectsData, projectChannels, activeProjectId, userOverrides);
 	});
 
-	// Track if deleted projects section is open
 	let showDeletedProjects = $state(false);
 
-	// Helper function to refresh both active and deleted projects
-	async function refreshProjects() {
-		if (!organization.data?.id) return;
-
-		const [activeProjects, archivedProjects] = await Promise.all([
-			orpc.projects.list({ organizationId: organization.data.id, page: 1, limit: 50 }),
-			orpc.projects.listDeleted({ organizationId: organization.data.id, page: 1, limit: 50 })
-		]);
-
-		projectsData = activeProjects.items;
-		deletedProjectsData = archivedProjects.items;
-
-		// Refresh channels for all active projects
-		const channelPromises = activeProjects.items.map((project) =>
-			orpc.channels
-				.listByFolder({ projectId: project.id, page: 1, limit: 50 })
-				.then((result) => ({ projectId: project.id, channels: result.items }))
-				.catch((error) => {
-					console.error(`Failed to load channels for project ${project.id}:`, error);
-					return { projectId: project.id, channels: [] };
-				})
-		);
-
-		const channelsResults = await Promise.all(channelPromises);
-
-		// Update projectChannels state
-		const newChannels: Record<string, { items: Channel[]; loading: boolean }> = {};
-		for (const result of channelsResults) {
-			newChannels[result.projectId] = { items: result.channels, loading: false };
-		}
-		projectChannels = newChannels;
+	function invalidateSidebar() {
+		if (!orgId) return;
+		queryClient.invalidateQueries({ queryKey: api.projects.list.key({ input: { organizationId: orgId, page: 1, limit: 50 } }) });
+		queryClient.invalidateQueries({ queryKey: api.channels.listByOrg.key({ input: { organizationId: orgId, page: 1, limit: 200 } }) });
+		queryClient.invalidateQueries({ queryKey: api.projects.listDeleted.key({ input: { organizationId: orgId, page: 1, limit: 50 } }) });
 	}
 
-	// Toggle project open/closed - track user intent
 	function toggleProject(projectId: string) {
 		const currentlyOpen = openProjects.has(projectId);
-
-		// Record the opposite of current state as user's preference
 		userOverrides[projectId] = !currentlyOpen;
-
-		// Trigger reactivity by reassigning
 		userOverrides = { ...userOverrides };
 	}
 
 	async function handleNewChannel(projectId: string) {
-		if (!organization.data) {
-			console.error('No organization selected');
-			return;
-		}
+		if (!organization.data) return;
 
 		const modal = modals.push('channel', {
-			props: {
-				organizationId: organization.data.id,
-				projectId: projectId
-			}
+			props: { organizationId: organization.data.id, projectId }
 		});
 
 		const result = await modal.resolution;
-
-		if (result && result.success && result.channelId) {
-			const channelResult = await orpc.channels.listByFolder({
-				projectId: projectId,
-				page: 1,
-				limit: 50
-			});
-			projectChannels[projectId] = { items: channelResult.items, loading: false };
+		if (result && result.success) {
+			invalidateSidebar();
 		}
 	}
 
-	async function handleEditProject(
-		projectId: string,
-		currentName: string,
-		currentUrl: string | null
-	) {
-		if (!organization.data) {
-			console.error('No organization selected');
-			return;
-		}
+	async function handleEditProject(projectId: string, currentName: string, currentUrl: string | null) {
+		if (!organization.data) return;
 
 		const modal = modals.push('editProject', {
-			props: {
-				projectId: projectId,
-				organizationId: organization.data.id,
-				currentName: currentName,
-				currentUrl: currentUrl
-			}
+			props: { projectId, organizationId: organization.data.id, currentName, currentUrl }
 		});
 
 		const result = await modal.resolution;
-
-		if (result && result.success) {
-			// Refresh the projects list reactively
-			await refreshProjects();
-		}
+		if (result && result.success) invalidateSidebar();
 	}
 
 	async function handleDeleteProject(projectId: string, projectName: string) {
-		if (!organization.data) {
-			console.error('No organization selected');
-			return;
-		}
+		if (!organization.data) return;
 
 		const modal = modals.push('deleteProject', {
-			props: {
-				projectId: projectId,
-				organizationId: organization.data.id,
-				projectName: projectName
-			}
+			props: { projectId, organizationId: organization.data.id, projectName }
 		});
 
 		const result = await modal.resolution;
-
-		if (result && result.success) {
-			// Refresh the projects list after deletion - move to archived
-			await refreshProjects();
-		}
+		if (result && result.success) invalidateSidebar();
 	}
 
 	async function handleRestoreProject(event: MouseEvent, projectId: string, projectName: string) {
 		event.preventDefault();
 		event.stopPropagation();
-
-		if (!organization.data) {
-			console.error('No organization selected');
-			return;
-		}
+		if (!organization.data) return;
 
 		const modal = modals.push('restoreProject', {
-			props: {
-				projectId: projectId,
-				organizationId: organization.data.id,
-				projectName: projectName
-			}
+			props: { projectId, organizationId: organization.data.id, projectName }
 		});
 
 		const result = await modal.resolution;
-
-		if (result && result.success) {
-			// Refresh the projects list after restoration - move back to active
-			await refreshProjects();
-		}
+		if (result && result.success) invalidateSidebar();
 	}
 
 	async function handleCreateProject() {
-		if (!organization.data) {
-			console.error('No organization selected');
-			return;
-		}
+		if (!organization.data) return;
 
 		const modal = modals.push('createProject', {
-			props: {
-				organizationId: organization.data.id
-			}
+			props: { organizationId: organization.data.id }
 		});
 
 		const result = await modal.resolution;
-
-		if (result && result.success) {
-			// Refresh the projects list after creation
-			await refreshProjects();
-		}
+		if (result && result.success) invalidateSidebar();
 	}
 </script>
 
@@ -359,7 +235,6 @@
 								{/snippet}
 							</Collapsible.Trigger>
 
-							<!-- Project Actions Menu -->
 							<FolderActionsMenu
 								{project}
 								onEdit={handleEditProject}
@@ -403,7 +278,6 @@
 				</Collapsible.Root>
 			{/each}
 
-			<!-- Archived Projects Section -->
 			{#if deletedProjectsData.length > 0}
 				<Collapsible.Root bind:open={showDeletedProjects} class="group/archived-collapsible mt-4">
 					<Sidebar.MenuItem>

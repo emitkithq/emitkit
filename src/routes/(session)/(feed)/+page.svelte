@@ -59,10 +59,10 @@
 
 		<!-- Event Feed -->
 		<EventFeed
-			initialEvents={data.events}
 			sites={data.projects}
 			channels={data.channels}
 			organizationId={data.orgId}
+			projectId={data.selectedProjectId ?? undefined}
 			showChannelContext={true}
 		/>
 	</div>

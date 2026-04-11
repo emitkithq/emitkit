@@ -138,6 +138,29 @@ export async function listChannels(
 	return result;
 }
 
+export async function listChannelsByOrg(
+	orgId: string,
+	pagination?: PaginationParams
+): Promise<PaginatedQueryResult<Channel>> {
+	const page = pagination?.page || 1;
+	const limit = pagination?.limit || 200;
+	const offset = (page - 1) * limit;
+
+	const query = db.query.channel.findMany({
+		where: and(eq(schema.channel.organizationId, orgId), isNull(schema.channel.deletedAt)),
+		orderBy: (channels, { desc }) => [desc(channels.createdAt)],
+		limit,
+		offset
+	});
+
+	const countQuery = db
+		.select({ count: sql<number>`count(*)` })
+		.from(schema.channel)
+		.where(and(eq(schema.channel.organizationId, orgId), isNull(schema.channel.deletedAt)));
+
+	return await buildPaginatedQuery(query, countQuery, { page, limit });
+}
+
 export async function listChannelsByFolder(
 	projectId: string,
 	pagination?: PaginationParams
