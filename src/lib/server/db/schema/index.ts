@@ -8,6 +8,7 @@ export * from './subscription';
 export * from './project';
 
 export * from './channel';
+export * from './event';
 export * from './webhook';
 export * from './push-subscription';
 export * from './funnel';

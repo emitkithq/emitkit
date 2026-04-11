@@ -1,31 +1,5 @@
-export type Event = {
-	id: string;
-	channelId: string;
-	projectId: string;
-	organizationId: string;
-	title: string;
-	description: string | null;
-	icon: string | null;
-	tags: string[];
-	metadata: Record<string, unknown>;
-	userId: string | null;
-	notify: boolean;
-	source: string;
-	createdAt: Date;
-};
+import type { InferSelectModel, InferInsertModel } from 'drizzle-orm';
+import type { event } from './event';
 
-export type EventInsert = {
-	id?: string;
-	channelId: string;
-	projectId: string;
-	organizationId: string;
-	title: string;
-	description?: string | null;
-	icon?: string | null;
-	tags?: string[];
-	metadata?: Record<string, unknown>;
-	userId?: string | null;
-	notify?: boolean;
-	source?: string;
-	createdAt?: Date;
-};
+export type Event = InferSelectModel<typeof event>;
+export type EventInsert = InferInsertModel<typeof event>;

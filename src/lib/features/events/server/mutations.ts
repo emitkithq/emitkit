@@ -1,5 +1,5 @@
 import type { EventInsert, Event } from '$lib/server/db/schema';
-import { createEvent } from './tinybird.service';
+import { createEvent } from './repository';
 import { db, schema } from '$lib/server/db';
 import { eq } from 'drizzle-orm';
 import { createContextLogger } from '$lib/server/logger';
@@ -27,7 +27,7 @@ export async function createAndBroadcastEvent(event: EventInsert): Promise<Event
 	const projectId = channel.projectId;
 
 	// 1. Create the event in Tinybird
-	const createdEvent = await createEvent(event, projectId ?? undefined, false);
+	const createdEvent = await createEvent(event, projectId ?? undefined);
 
 	// 2. Fire-and-forget non-critical side effects
 	waitUntil(
