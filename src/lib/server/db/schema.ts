@@ -3,6 +3,7 @@ export * from './schema/subscription';
 export * from './schema/project';
 export * from './schema/utils';
 export * from './schema/channel';
+export * from './schema/event';
 export * from './schema/webhook';
 export * from './schema/push-subscription';
 export * from './schema/funnel';

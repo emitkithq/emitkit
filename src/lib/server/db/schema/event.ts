@@ -35,11 +35,11 @@ export const event = pgTable(
 		source: t.varchar('source', { length: 50 }).notNull().default('api'),
 		createdAt: t.timestamp('created_at').notNull().defaultNow()
 	}),
-	(table) => [
-		index('event_org_created_idx').on(table.organizationId, table.createdAt),
-		index('event_channel_created_idx').on(table.channelId, table.createdAt),
-		index('event_project_created_idx').on(table.projectId, table.createdAt)
-	]
+	(table) => ({
+		idxOrgCreated: index('event_org_created_idx').on(table.organizationId, table.createdAt),
+		idxChannelCreated: index('event_channel_created_idx').on(table.channelId, table.createdAt),
+		idxProjectCreated: index('event_project_created_idx').on(table.projectId, table.createdAt)
+	})
 );
 
 export const eventRelations = relations(event, ({ one }) => ({

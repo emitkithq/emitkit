@@ -36,7 +36,7 @@ const createDb = () => {
 			environment: 'local-development'
 		});
 
-		const client = postgres(env.DATABASE_URL);
+		const client = postgres(env.DATABASE_URL!);
 		return drizzlePg(client, { schema });
 	}
 };
