@@ -70,11 +70,14 @@ self.addEventListener('notificationclick', (event) => {
 /**
  * Background sync — retry failed requests
  */
-self.addEventListener('sync' as string, ((event: SyncEvent) => {
-	if (event.tag === 'sync-events') {
-		event.waitUntil(syncEvents());
-	}
-}) as EventListener);
+self.addEventListener(
+	'sync' as string,
+	((event: SyncEvent) => {
+		if (event.tag === 'sync-events') {
+			event.waitUntil(syncEvents());
+		}
+	}) as EventListener
+);
 
 interface SyncEvent extends ExtendableEvent {
 	tag: string;

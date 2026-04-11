@@ -10,8 +10,6 @@ export default defineConfig({
 		sveltekit(),
 		SvelteKitPWA({
 			strategies: 'injectManifest',
-			srcDir: 'src',
-			filename: 'sw.ts',
 			manifest: {
 				short_name: 'EmitKit',
 				name: 'EmitKit - Real-time Event Notifications',

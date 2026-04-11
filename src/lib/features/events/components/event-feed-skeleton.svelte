@@ -3,7 +3,7 @@
 </script>
 
 <div class="flex w-full max-w-lg flex-col gap-3">
-	{#each { length: 6 } as _}
+	{#each { length: 6 } as _, i (i)}
 		<div class="flex items-start gap-3 rounded-lg border p-4">
 			<Skeleton class="size-8 shrink-0 rounded-full" />
 			<div class="flex-1 space-y-2">
