@@ -101,6 +101,9 @@ importers:
       web-push:
         specifier: ^3.6.7
         version: 3.6.7
+      workbox-window:
+        specifier: ^7.4.0
+        version: 7.4.0
       ws:
         specifier: ^8.18.3
         version: 8.18.3
