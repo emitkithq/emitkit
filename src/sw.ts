@@ -27,16 +27,15 @@ self.addEventListener('push', (event) => {
 		const data = event.data.json();
 
 		const title = data.title || 'New Event';
-		const options: NotificationOptions = {
+		const options = {
 			body: data.body || data.description || '',
 			icon: data.icon || '/web-app-manifest-192x192.png',
 			badge: '/favicon-96x96.png',
 			tag: data.tag || data.eventId || 'notification',
 			data: data.data || data,
 			requireInteraction: data.requireInteraction || false,
-			actions: data.actions || [],
 			vibrate: [200, 100, 200]
-		};
+		} satisfies NotificationOptions & { vibrate?: number[] };
 
 		event.waitUntil(self.registration.showNotification(title, options));
 	} catch (error) {
@@ -71,11 +70,15 @@ self.addEventListener('notificationclick', (event) => {
 /**
  * Background sync — retry failed requests
  */
-self.addEventListener('sync', (event) => {
+self.addEventListener('sync' as string, ((event: SyncEvent) => {
 	if (event.tag === 'sync-events') {
 		event.waitUntil(syncEvents());
 	}
-});
+}) as EventListener);
+
+interface SyncEvent extends ExtendableEvent {
+	tag: string;
+}
 
 async function syncEvents() {
 	console.log('Background sync triggered');

@@ -80,12 +80,16 @@
 	}));
 
 	const channelsQuery = createQuery(() => ({
-		...api.channels.listByOrg.queryOptions({ input: { organizationId: orgId!, page: 1, limit: 200 } }),
+		...api.channels.listByOrg.queryOptions({
+			input: { organizationId: orgId!, page: 1, limit: 200 }
+		}),
 		enabled: !!orgId
 	}));
 
 	const deletedQuery = createQuery(() => ({
-		...api.projects.listDeleted.queryOptions({ input: { organizationId: orgId!, page: 1, limit: 50 } }),
+		...api.projects.listDeleted.queryOptions({
+			input: { organizationId: orgId!, page: 1, limit: 50 }
+		}),
 		enabled: !!orgId
 	}));
 
@@ -123,16 +127,32 @@
 	let openProjects = $derived.by(() => {
 		const strategy = calculateExpansionStrategy(projectsData, projectChannels);
 		const activeProjectId = page.params.project_id;
-		return calculateOpenProjects(strategy, projectsData, projectChannels, activeProjectId, userOverrides);
+		return calculateOpenProjects(
+			strategy,
+			projectsData,
+			projectChannels,
+			activeProjectId,
+			userOverrides
+		);
 	});
 
 	let showDeletedProjects = $state(false);
 
 	function invalidateSidebar() {
 		if (!orgId) return;
-		queryClient.invalidateQueries({ queryKey: api.projects.list.key({ input: { organizationId: orgId, page: 1, limit: 50 } }) });
-		queryClient.invalidateQueries({ queryKey: api.channels.listByOrg.key({ input: { organizationId: orgId, page: 1, limit: 200 } }) });
-		queryClient.invalidateQueries({ queryKey: api.projects.listDeleted.key({ input: { organizationId: orgId, page: 1, limit: 50 } }) });
+		queryClient.invalidateQueries({
+			queryKey: api.projects.list.key({ input: { organizationId: orgId, page: 1, limit: 50 } })
+		});
+		queryClient.invalidateQueries({
+			queryKey: api.channels.listByOrg.key({
+				input: { organizationId: orgId, page: 1, limit: 200 }
+			})
+		});
+		queryClient.invalidateQueries({
+			queryKey: api.projects.listDeleted.key({
+				input: { organizationId: orgId, page: 1, limit: 50 }
+			})
+		});
 	}
 
 	function toggleProject(projectId: string) {
@@ -154,7 +174,11 @@
 		}
 	}
 
-	async function handleEditProject(projectId: string, currentName: string, currentUrl: string | null) {
+	async function handleEditProject(
+		projectId: string,
+		currentName: string,
+		currentUrl: string | null
+	) {
 		if (!organization.data) return;
 
 		const modal = modals.push('editProject', {

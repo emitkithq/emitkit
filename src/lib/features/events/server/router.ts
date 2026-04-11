@@ -35,10 +35,14 @@ const listByOrg = authed
 		})
 	)
 	.handler(async ({ input }) => {
-		return await listEventsByOrg(input.organizationId, {
-			page: input.page,
-			limit: input.limit
-		}, input.projectId);
+		return await listEventsByOrg(
+			input.organizationId,
+			{
+				page: input.page,
+				limit: input.limit
+			},
+			input.projectId
+		);
 	});
 
 const remove = authed

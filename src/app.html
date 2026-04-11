@@ -19,14 +19,62 @@
 		%sveltekit.head%
 	</head>
 	<body data-sveltekit-preload-data="hover">
-		<div id="app-loading" style="position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#090714;z-index:9999">
-			<img src="%sveltekit.assets%/favicon.svg" alt="" width="56" height="56" style="animation:_p 1.8s ease-in-out infinite" />
-			<style>@keyframes _p{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.92)}}</style>
+		<div
+			id="app-loading"
+			style="
+				position: fixed;
+				inset: 0;
+				display: flex;
+				flex-direction: column;
+				align-items: center;
+				justify-content: center;
+				background: #090714;
+				z-index: 9999;
+			"
+		>
+			<img
+				src="%sveltekit.assets%/favicon.svg"
+				alt=""
+				width="56"
+				height="56"
+				style="animation: _p 1.8s ease-in-out infinite"
+			/>
+			<style>
+				@keyframes _p {
+					0%,
+					100% {
+						opacity: 1;
+						transform: scale(1);
+					}
+					50% {
+						opacity: 0.5;
+						transform: scale(0.92);
+					}
+				}
+			</style>
 		</div>
 		<div style="display: contents">%sveltekit.body%</div>
 		<script>
-			new MutationObserver(function(m,o){if(document.querySelector('[data-svelte-h],.svelte-')||document.body.children.length>2){var e=document.getElementById('app-loading');if(e){e.style.opacity='0';e.style.transition='opacity .15s';setTimeout(function(){e.remove()},150)}o.disconnect()}}).observe(document.body,{childList:true,subtree:true,attributes:true});
-			setTimeout(function(){var e=document.getElementById('app-loading');if(e)e.remove()},4000);
+			new MutationObserver(function (m, o) {
+				if (
+					document.querySelector('[data-svelte-h],.svelte-') ||
+					document.body.children.length > 2
+				) {
+					var e = document.getElementById('app-loading');
+					if (e) {
+						e.style.opacity = '0';
+						e.style.transition = 'opacity .15s';
+						setTimeout(function () {
+							e.remove();
+						}, 150);
+					}
+					o.disconnect();
+				}
+			}).observe(document.body, { childList: true, subtree: true, attributes: true });
+			setTimeout(function () {
+				var e = document.getElementById('app-loading');
+				if (e) e.remove();
+			}, 4000);
 		</script>
 	</body>
 </html>

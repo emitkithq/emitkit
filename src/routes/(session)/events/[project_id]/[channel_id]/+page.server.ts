@@ -1,5 +1,8 @@
 import type { PageServerLoad } from './$types';
-import { getChannelByIdAndOrg, listChannelsByFolder } from '$lib/features/channels/server/repository';
+import {
+	getChannelByIdAndOrg,
+	listChannelsByFolder
+} from '$lib/features/channels/server/repository';
 import { error } from '@sveltejs/kit';
 
 export const load: PageServerLoad = async ({ params, locals }) => {

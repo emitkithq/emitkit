@@ -26,8 +26,10 @@
 	}: StackItemProps<{ success: boolean; folderName?: string; folderUrl?: string | null }> &
 		Props = $props();
 
-	// Form state
+	// Form state — intentionally capturing initial prop values
+	// svelte-ignore state_referenced_locally
 	let name = $state(currentName);
+	// svelte-ignore state_referenced_locally
 	let url = $state(currentUrl || '');
 	let isSubmitting = $state(false);
 	let error = $state<string | null>(null);

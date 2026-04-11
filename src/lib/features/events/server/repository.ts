@@ -7,10 +7,7 @@ import { createLogger } from '$lib/server/logger';
 
 const logger = createLogger('events-repository');
 
-export async function createEvent(
-	eventInput: EventInsert,
-	projectId?: string
-): Promise<Event> {
+export async function createEvent(eventInput: EventInsert, projectId?: string): Promise<Event> {
 	// If projectId not provided, fetch from channel
 	let resolvedProjectId = eventInput.projectId || projectId;
 	if (!resolvedProjectId) {
@@ -87,7 +84,7 @@ export async function createEventBatch(
 		createdAt: e.createdAt ?? new Date()
 	}));
 
-	const result = await db.insert(schema.event).values(rows).returning({ id: schema.event.id });
+	const result = await db.insert(schema.event).values(rows).returning();
 
 	logger.info('Event batch created', {
 		totalEvents: events.length,
@@ -106,10 +103,7 @@ export async function listEvents(
 	const limit = pagination?.limit || 20;
 	const offset = (page - 1) * limit;
 
-	const where = and(
-		eq(schema.event.channelId, channelId),
-		eq(schema.event.organizationId, orgId)
-	);
+	const where = and(eq(schema.event.channelId, channelId), eq(schema.event.organizationId, orgId));
 
 	const [items, countResult] = await Promise.all([
 		db.query.event.findMany({
@@ -118,7 +112,10 @@ export async function listEvents(
 			limit,
 			offset
 		}),
-		db.select({ count: sql<number>`count(*)` }).from(schema.event).where(where)
+		db
+			.select({ count: sql<number>`count(*)` })
+			.from(schema.event)
+			.where(where)
 	]);
 
 	const total = Number(countResult[0]?.count ?? 0);
@@ -126,7 +123,14 @@ export async function listEvents(
 
 	return {
 		items,
-		metadata: { page, limit, total, totalPages, hasNextPage: page < totalPages, hasPreviousPage: page > 1 }
+		metadata: {
+			page,
+			limit,
+			total,
+			totalPages,
+			hasNextPage: page < totalPages,
+			hasPreviousPage: page > 1
+		}
 	};
 }
 
@@ -150,7 +154,10 @@ export async function listEventsByOrg(
 			limit,
 			offset
 		}),
-		db.select({ count: sql<number>`count(*)` }).from(schema.event).where(where)
+		db
+			.select({ count: sql<number>`count(*)` })
+			.from(schema.event)
+			.where(where)
 	]);
 
 	const total = Number(countResult[0]?.count ?? 0);
@@ -158,7 +165,14 @@ export async function listEventsByOrg(
 
 	return {
 		items,
-		metadata: { page, limit, total, totalPages, hasNextPage: page < totalPages, hasPreviousPage: page > 1 }
+		metadata: {
+			page,
+			limit,
+			total,
+			totalPages,
+			hasNextPage: page < totalPages,
+			hasPreviousPage: page > 1
+		}
 	};
 }
 
@@ -199,7 +213,10 @@ export async function getEventStats(
 	const where = and(...conditions);
 
 	const [countResult, usersResult] = await Promise.all([
-		db.select({ count: sql<number>`count(*)` }).from(schema.event).where(where),
+		db
+			.select({ count: sql<number>`count(*)` })
+			.from(schema.event)
+			.where(where),
 		db
 			.select({ count: sql<number>`count(distinct ${schema.event.userId})` })
 			.from(schema.event)
@@ -213,7 +230,11 @@ export async function getEventStats(
 	};
 }
 
-export async function deleteEvent(eventId: string, channelId: string, orgId: string): Promise<void> {
+export async function deleteEvent(
+	eventId: string,
+	channelId: string,
+	orgId: string
+): Promise<void> {
 	await db
 		.delete(schema.event)
 		.where(
@@ -225,4 +246,13 @@ export async function deleteEvent(eventId: string, channelId: string, orgId: str
 		);
 
 	logger.info('Event deleted', { eventId, channelId, organizationId: orgId });
+}
+
+export async function hasEventsByOrg(orgId: string): Promise<boolean> {
+	const result = await db
+		.select({ count: sql<number>`1` })
+		.from(schema.event)
+		.where(eq(schema.event.organizationId, orgId))
+		.limit(1);
+	return result.length > 0;
 }
