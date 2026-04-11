@@ -7,11 +7,7 @@
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
 	import { FolderActionsMenu } from '$lib/components/app/project-actions';
 	import FolderFavicon from '$lib/components/app/folder-favicon.svelte';
-	import {
-		listProjectsQuery,
-		listDeletedProjectsQuery
-	} from '$lib/features/projects/projects.remote';
-	import { listChannelsByFolderQuery } from '$lib/features/channels/channels.remote';
+	import { orpc } from '$lib/config/rpc-client';
 	import { useCurrentOrganization } from 'better-auth-ui-svelte';
 	import { useModals } from '$lib/components/modal-stack/modal-stack-provider.svelte';
 	import { page } from '$app/state';
@@ -109,13 +105,15 @@
 	// Fetch projects and all channels when organization changes
 	$effect(() => {
 		if (organization.data?.id) {
-			listProjectsQuery({ organizationId: organization.data.id, page: 1, limit: 50 }).then(
-				async (data) => {
+			orpc.projects
+				.list({ organizationId: organization.data.id, page: 1, limit: 50 })
+				.then(async (data) => {
 					projectsData = data.items;
 
 					// Preload channels for all projects
 					const channelPromises = data.items.map((project) =>
-						listChannelsByFolderQuery({ projectId: project.id, page: 1, limit: 50 })
+						orpc.channels
+							.listByFolder({ projectId: project.id, page: 1, limit: 50 })
 							.then((result) => ({ projectId: project.id, channels: result.items }))
 							.catch((error) => {
 								console.error(`Failed to load channels for project ${project.id}:`, error);
@@ -131,13 +129,12 @@
 						newChannels[result.projectId] = { items: result.channels, loading: false };
 					}
 					projectChannels = newChannels;
-				}
-			);
-			listDeletedProjectsQuery({ organizationId: organization.data.id, page: 1, limit: 50 }).then(
-				(data) => {
+				});
+			orpc.projects
+				.listDeleted({ organizationId: organization.data.id, page: 1, limit: 50 })
+				.then((data) => {
 					deletedProjectsData = data.items;
-				}
-			);
+				});
 		}
 	});
 
@@ -169,8 +166,8 @@
 		if (!organization.data?.id) return;
 
 		const [activeProjects, archivedProjects] = await Promise.all([
-			listProjectsQuery({ organizationId: organization.data.id, page: 1, limit: 50 }),
-			listDeletedProjectsQuery({ organizationId: organization.data.id, page: 1, limit: 50 })
+			orpc.projects.list({ organizationId: organization.data.id, page: 1, limit: 50 }),
+			orpc.projects.listDeleted({ organizationId: organization.data.id, page: 1, limit: 50 })
 		]);
 
 		projectsData = activeProjects.items;
@@ -178,7 +175,8 @@
 
 		// Refresh channels for all active projects
 		const channelPromises = activeProjects.items.map((project) =>
-			listChannelsByFolderQuery({ projectId: project.id, page: 1, limit: 50 })
+			orpc.channels
+				.listByFolder({ projectId: project.id, page: 1, limit: 50 })
 				.then((result) => ({ projectId: project.id, channels: result.items }))
 				.catch((error) => {
 					console.error(`Failed to load channels for project ${project.id}:`, error);
@@ -223,7 +221,7 @@
 		const result = await modal.resolution;
 
 		if (result && result.success && result.channelId) {
-			const channelResult = await listChannelsByFolderQuery({
+			const channelResult = await orpc.channels.listByFolder({
 				projectId: projectId,
 				page: 1,
 				limit: 50

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { StackItemProps } from '@svelte-put/async-stack';
-	import { createProjectCommand } from '$lib/features/projects/projects.remote';
+	import { orpc } from '$lib/config/rpc-client';
 	import * as Field from '$lib/components/ui/field/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Textarea } from '$lib/components/ui/textarea/index.js';
@@ -72,7 +72,7 @@
 		error = null;
 
 		try {
-			const result = await createProjectCommand({
+			const result = await orpc.projects.create({
 				organizationId,
 				userId,
 				name: form.name,

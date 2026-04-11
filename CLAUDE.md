@@ -9,6 +9,7 @@
 ## Git
 
 - Do not commit and push for the user. Instead, provide the user with the necessary git commands to run on their side.
+- Before pushing, ensure `pnpm run check` (svelte-check) and `pnpm lint` (prettier + eslint) both pass with zero errors. If the user hasn't access about committing and pushing yet, it's not needed to run `pnpm lint` in between changes.
 
 ## TypeScript
 
@@ -27,21 +28,27 @@ import ZapIcon from '@lucide/svelte/icons/zap';
 
 ### For Self-Hosting
 
-- **[Configuration Guide](./docs/configuration.md)** - Environment variables, secrets, VAPID keys
+- **[Configuration Guide](./docs/configuration.md)** - Environment variables, secrets
 - **[Installation Guide](./docs/installation.md)** - Step-by-step setup instructions
 - **[Deployment Guide](./docs/deployment.md)** - Production deployment to Vercel
-- **[Tinybird Setup](./docs/tinybird.md)** - Event storage and analytics
+- **[GitHub Auto-Deploy](./docs/github-auto-deploy.md)** - Webhook and GitHub Action deployment paths
+- **[Tinybird Setup](./docs/tinybird.md)** - Render tracking and billing analytics
 - **[Troubleshooting](./docs/troubleshooting.md)** - Common issues and solutions
 
 ### For Development
 
 - **[Backend Architecture](#backend-architecture-patterns)** - Server-side patterns (below)
+- **[oRPC + TanStack Query](./docs/orpc-tanstack-query.md)** - Dashboard data fetching & mutations
 - **[Type System Template](#type-system-template)** - Creating types for new features (below)
 - **[Modal Stack](#modal-stack-system)** - Modal management (below)
 - **[Logging System](#logging-system-architecture)** - Structured logging (below)
 - **[SEO Architecture](./docs/seo-architecture.md)** - SEO meta tags implementation
 
-# Svelte MCP Server
+# SVelte
+
+1. If you get this `state_referenced_locally` issue when linting for SVelteKit, it could be to reference the variable such that it is lazily evaluated.
+
+## Svelte MCP Server
 
 You are able to use the Svelte MCP server, where you have access to comprehensive Svelte 5 and SvelteKit documentation. Here's how to use the available tools effectively:
 
@@ -73,7 +80,8 @@ After completing the code, ask the user if they want a playground link. Only cal
 
 - **Framework**: SvelteKit with Svelte 5
 - **Database**: PostgreSQL with Drizzle ORM
-- **Event Storage**: Tinybird (ClickHouse) for scalable event storage and real-time analytics
+- **API Layer**: oRPC (typed RPC) + TanStack Query Svelte v6 (caching & mutations)
+- **Usage Tracking**: Tinybird (ClickHouse) for render events and billing analytics
 - **Styling**: shadcn-svelte + Tailwind CSS
 - **Package Manager**: pnpm
 
@@ -81,7 +89,7 @@ After completing the code, ask the user if they want a playground link. Only cal
 
 1. **Feature-First Organization** - All code for a feature lives in one directory
 2. **Type Safety** - End-to-end TypeScript with Zod validation
-3. **Server-First Data Flow** - Page loads for queries, remote functions for mutations
+3. **Data Flow**: oRPC + TanStack Query Svelte (see [docs/orpc-tanstack-query.md](./docs/orpc-tanstack-query.md))
 4. **DRY SEO** - Three-layer SEO configuration system
 5. **Centralized Modals** - Promise-based modal stack
 
@@ -89,17 +97,13 @@ After completing the code, ask the user if they want a playground link. Only cal
 
 ### Getting Started
 
-- **Standards**: See [docs/standards.md](./docs/standards.md) for project standards
 - **Backend Architecture**: See [Backend Architecture Patterns](#backend-architecture-patterns) below
 
 ### Development
 
-- **Filtering**: See [docs/filtering.md](./docs/filtering.md) for filtering implementation
 - **Type System**: See [Type System Template](#type-system-template) below
-- **Analytics**: See [docs/analytics.md](./docs/analytics.md) for event tracking
-- **Analytics Proxy**: See [docs/analytics-proxy.md](./docs/analytics-proxy.md) for proxy setup
 
-### Event Storage & Real-time Analytics (Tinybird)
+### Usage Tracking (Tinybird)
 
 - **Tinybird Setup**: See [docs/tinybird.md](./docs/tinybird.md) for complete setup guide
 - **Tinybird CLI**: See [tinybird/README.md](./tinybird/README.md) for CLI quick reference
@@ -113,7 +117,6 @@ After completing the code, ask the user if they want a playground link. Only cal
 ### SEO & Meta Tags
 
 - **SEO Architecture**: See [docs/seo-architecture.md](./docs/seo-architecture.md)
-- **Detailed Plan**: See [tasks/seo-meta-tags-architecture.md](./tasks/seo-meta-tags-architecture.md)
 
 ### Svelte Development
 
@@ -131,8 +134,10 @@ After completing the code, ask the user if they want a playground link. Only cal
 2. Add database schema: `src/lib/server/db/schema/<feature>.ts`
 3. Generate migration: `pnpm run db:generate`
 4. Create repository, types, validators
-5. Add page load functions in routes
-6. See [Type System Template](#type-system-template) below for detailed steps
+5. Create oRPC router: `src/lib/features/<name>/server/router.ts`
+6. Register router in `src/lib/server/rpc/router.ts`
+7. Use `api.<feature>.*` in components with `createQuery`/`createMutation`
+8. See [oRPC + TanStack Query](./docs/orpc-tanstack-query.md) and [Type System Template](#type-system-template) below
 
 ### Adding SEO to a Page
 
@@ -161,89 +166,6 @@ const result = await modals.push('confirm', { props: {...} }).resolution;
 ```
 
 See [Modal Stack System](#modal-stack-system) below for details.
-
-### Analytics
-
-**Client-Side:**
-
-```typescript
-import { clientAnalytics } from '$lib/features/analytics/client';
-
-clientAnalytics.track('website_viewed', {
-	websiteId: '123',
-	websiteSlug: 'example',
-	websiteName: 'Example',
-	viewType: 'modal'
-});
-```
-
-**Server-Side:**
-
-```typescript
-import { track, flush } from '$lib/features/analytics/server';
-
-await track(
-	event,
-	'newsletter_subscribed',
-	{
-		email: 'user@example.com',
-		source: 'newsletter_modal'
-	},
-	{ email: 'user@example.com' }
-);
-
-await flush(); // Always flush in serverless
-```
-
-See [docs/analytics.md](./docs/analytics.md) for full guide.
-
-### Events (Tinybird)
-
-Events are stored in Tinybird (ClickHouse) for scalable storage and real-time analytics.
-
-**Hierarchy**: `organization -> site -> channel -> event`
-
-**Creating Events:**
-
-```typescript
-import { createEvent } from '$lib/features/events/server';
-
-// Create event (site_id automatically fetched from channel)
-const event = await createEvent({
-	channelId: 'ch_123',
-	organizationId: 'org_456',
-	title: 'User signed up',
-	description: 'New user registration',
-	tags: ['signup', 'onboarding'],
-	metadata: { plan: 'pro' },
-	notify: true
-});
-```
-
-**Querying Events:**
-
-```typescript
-import { listEvents, getEventStats } from '$lib/features/events/server';
-
-// Paginated list
-const events = await listEvents(channelId, orgId, { page: 1, limit: 20 });
-
-// Dashboard stats
-const stats = await getEventStats(orgId, channelId, dateFrom, dateTo);
-```
-
-**Retention Policies:**
-
-Events are automatically filtered based on organization's `retention_days`:
-
-- Free: 7 days
-- Basic: 30 days
-- Pro: 90 days (default)
-- Enterprise: 365 days
-
-**Real-time Updates:**
-
-SSE endpoints poll Tinybird every 3 seconds for new events. Clients receive updates with 3-second latency (no Redis pub/sub needed).
 
 ## Development Workflow
 
@@ -280,7 +202,7 @@ This document outlines the backend architecture using SvelteKit, Drizzle ORM, an
 2. **Feature-First Organization**: Group related code by feature rather than technical layers
 3. **Type Safety Throughout**: Leverage TypeScript and Zod for end-to-end type safety
 4. **Testability Without Overhead**: Structure code to be testable without complex dependency injection
-5. **Performance by Default**: Optimize for read-heavy operations typical of inspiration galleries
+5. **Performance by Default**: Optimize for read-heavy operations
 
 ## Table of Contents
 
@@ -307,26 +229,25 @@ This architecture uses a **feature-first** approach, where each feature contains
 src/
 ├── lib/
 │   ├── features/                    # Feature-based organization
-│   │   ├── channels/
+│   │   ├── stores/
 │   │   │   ├── server/              # Server-only code (SvelteKit protected)
-│   │   │   │   └── repository.ts    # Data access layer
+│   │   │   │   ├── repository.ts    # Data access layer
+│   │   │   │   └── router.ts        # oRPC procedures for this feature
 │   │   │   ├── components/          # Feature-specific UI components
 │   │   │   ├── validators.ts        # Shared (client + server)
 │   │   │   └── types.ts             # Shared (client + server)
 │   │   │
-│   │   ├── sites/
+│   │   ├── renders/
 │   │   │   ├── server/
 │   │   │   │   ├── repository.ts    # Data access
-│   │   │   │   └── service.ts       # Business logic (optional)
-│   │   │   └── ...
-│   │   │
-│   │   ├── events/
-│   │   │   ├── server/
-│   │   │   │   ├── tinybird.service.ts
-│   │   │   │   └── mutations.ts     # Side effects (optional)
+│   │   │   │   ├── service.ts       # Business logic (optional)
+│   │   │   │   └── tinybird.service.ts
 │   │   │   └── ...
 │   │   │
 │   │   └── [other-features]/
+│   │
+│   ├── config/
+│   │   └── rpc-client.ts            # oRPC client + TanStack Query utils
 │   │
 │   ├── server/                      # Global server-only utilities
 │   │   ├── db/
@@ -335,12 +256,19 @@ src/
 │   │   │   ├── utils.ts             # Pagination, conflict resolution
 │   │   │   └── index.ts             # Database connection
 │   │   │
+│   │   ├── rpc/
+│   │   │   ├── index.ts             # Base procedure, auth/admin middleware
+│   │   │   └── router.ts            # Root router (assembles feature routers)
+│   │   │
 │   │   ├── logger/                  # Centralized logging
 │   │   ├── cache.ts                 # Redis caching utilities
 │   │   └── tinybird.ts              # Tinybird client
 │   │
 │   └── components/                  # Global shared UI components
 │       └── ui/                      # ShadCN components
+│
+├── routes/
+│   └── api/rpc/[...rest]/+server.ts # SvelteKit handler for oRPC
 ```
 
 ### Key Organizational Principles
@@ -350,6 +278,9 @@ src/
 ```
 lib/features/<feature-name>/
 ├── server/           # Server-only code (protected by SvelteKit)
+│   ├── repository.ts # Data access layer
+│   ├── router.ts     # oRPC procedures (queries + mutations)
+│   └── service.ts    # Business logic (optional)
 ├── components/       # Feature-specific UI components
 ├── validators.ts     # SHARED - Use on client AND server
 ├── types.ts          # SHARED - Use on client AND server
@@ -369,11 +300,11 @@ lib/features/<feature-name>/
 
 ```typescript
 // ✅ CORRECT
-import { websiteRepository } from '$lib/features/websites/server/repository';
-import { insertWebsiteSchema } from '$lib/features/websites/validators';
+import { storeRepository } from '$lib/features/stores/server/repository';
+import { insertStoreSchema } from '$lib/features/stores/validators';
 
 // ❌ AVOID: Relative paths
-import { websiteRepository } from './repository';
+import { storeRepository } from './repository';
 ```
 
 **Benefits:**
@@ -394,20 +325,20 @@ Drizzle schema definitions that serve as the single source of truth for database
 Located in: `lib/server/db/schema/`
 
 ```typescript
-// lib/server/db/schema/websites.ts
+// lib/server/db/schema/stores.ts
 import { pgTable, serial, text, timestamp } from 'drizzle-orm/pg-core';
 import { createInsertSchema, createSelectSchema } from 'drizzle-zod';
 
-export const websites = pgTable('websites', {
+export const stores = pgTable('stores', {
 	id: serial('id').primaryKey(),
 	name: text('name').notNull(),
-	slug: text('slug').unique().notNull()
+	domain: text('domain').unique().notNull()
 	// ... other fields
 });
 
 // Auto-generate Zod schemas
-export const insertWebsiteSchema = createInsertSchema(websites);
-export const selectWebsiteSchema = createSelectSchema(websites);
+export const insertStoreSchema = createInsertSchema(stores);
+export const selectStoreSchema = createSelectSchema(stores);
 ```
 
 ### 2. Repository Layer (Required)
@@ -417,24 +348,24 @@ Lightweight data access layer that encapsulates database queries. Every feature 
 Located in: `lib/features/*/server/repository.ts`
 
 ```typescript
-// lib/features/channels/server/repository.ts
-export async function createChannel(channel: ChannelInsert): Promise<Channel> {
-	const [created] = await db.insert(schema.channel).values(channel).returning();
-	if (!created) throw new Error('Failed to create channel');
+// lib/features/stores/server/repository.ts
+export async function createStore(store: StoreInsert): Promise<Store> {
+	const [created] = await db.insert(schema.store).values(store).returning();
+	if (!created) throw new Error('Failed to create store');
 	return created;
 }
 
-export async function getChannel(id: string): Promise<Channel | null> {
-	const channel = await db.query.channel.findFirst({
-		where: eq(schema.channel.id, id)
+export async function getStore(id: string): Promise<Store | null> {
+	const store = await db.query.store.findFirst({
+		where: eq(schema.store.id, id)
 	});
-	return channel ?? null;
+	return store ?? null;
 }
 
-export async function listChannels(
+export async function listStores(
 	orgId: string,
 	pagination?: PaginationParams
-): Promise<PaginatedQueryResult<Channel>> {
+): Promise<PaginatedQueryResult<Store>> {
 	// ... pagination logic
 }
 ```
@@ -453,15 +384,15 @@ Business logic and orchestration when needed. Add only when repository logic bec
 Located in: `lib/features/*/server/service.ts`
 
 ```typescript
-// lib/features/sites/server/service.ts
-export async function createSiteWithApiKey(
+// lib/features/stores/server/service.ts
+export async function createStoreWithApiKey(
 	orgId: string,
-	data: SiteInput
-): Promise<{ site: Site; apiKey: string }> {
+	data: StoreInput
+): Promise<{ store: Store; apiKey: string }> {
 	// Complex business logic involving multiple operations
-	const site = await createSite({ ...data, organizationId: orgId });
-	const apiKey = await generateApiKey(site.id);
-	return { site, apiKey };
+	const store = await createStore({ ...data, organizationId: orgId });
+	const apiKey = await generateApiKey(store.id);
+	return { store, apiKey };
 }
 ```
 
@@ -478,94 +409,79 @@ Side-effect orchestration for complex workflows. Only add when you have fire-and
 Located in: `lib/features/*/server/mutations.ts`
 
 ```typescript
-// lib/features/events/server/mutations.ts
-export async function createAndBroadcastEvent(event: EventInsert): Promise<Event> {
-	// Create the event
-	const createdEvent = await createEvent(event);
+// lib/features/renders/server/mutations.ts
+export async function createRenderAndTrack(render: RenderInsert): Promise<Render> {
+	// Create the render record
+	const createdRender = await createRender(render);
 
 	// Fire-and-forget side effects
-	Promise.all([
-		invalidateChannelCache(event.channelId),
-		publishToChannel(event.channelId, createdEvent)
-	]).catch((error) => logger.error('Side effects failed', error));
-
-	// Send push notifications (non-blocking)
-	sendPushNotificationToChannels([event.channelId]).catch((error) =>
-		logger.error('Push notification failed', error)
+	Promise.all([trackRenderInTinybird(createdRender), invalidateStoreCache(render.storeId)]).catch(
+		(error) => logger.error('Side effects failed', error)
 	);
 
-	return createdEvent;
+	return createdRender;
 }
 ```
 
 **When to use:**
 
-- Multiple async side effects (caching, notifications, webhooks)
+- Multiple async side effects (caching, analytics, webhooks)
 - Fire-and-forget operations that shouldn't block the response
-- Complex event-driven workflows
+- Complex workflows
 
 ---
 
 ## Data Flow Architecture
 
-### Configuration
+The project uses **two data flow patterns** depending on the context:
 
-Enable remote functions in `svelte.config.js`:
+### 1. Dashboard: oRPC + TanStack Query Svelte
 
-```javascript
-kit: {
-	experimental: {
-		remoteFunctions: true;
-	}
-}
-```
+All authenticated dashboard pages use oRPC for the API layer and TanStack Query for client-side data fetching, caching, and mutations.
 
-### Data Flow Patterns
+**For full documentation, see [docs/orpc-tanstack-query.md](./docs/orpc-tanstack-query.md).**
 
-**For Reading Data (Queries):**
-
-- Use SvelteKit **page loads** (`+page.server.ts` or `+layout.server.ts`)
-- Data is loaded server-side and passed to components via `data` prop
-
-**For Writing Data (Mutations):**
-
-- Use SvelteKit **remote functions** (form and command)
-- Type-safe, validated mutations callable from components
-
-### Reading Data with Page Loads
-
-```typescript
-// routes/websites/+page.server.ts
-import type { PageServerLoad } from './$types';
-import { websiteRepository } from '$lib/features/websites/server/repository';
-
-export const load: PageServerLoad = async ({ url }) => {
-	const limit = Number(url.searchParams.get('limit')) || 20;
-	const websites = await websiteRepository.findAll({ limit });
-
-	return { websites };
-};
-```
-
-**Usage in components:**
+**Quick reference:**
 
 ```svelte
 <script lang="ts">
-	import type { PageData } from './$types';
-	let { data }: { data: PageData } = $props();
-</script>
+	import { createQuery, createMutation, useQueryClient } from '@tanstack/svelte-query';
+	import { api } from '$lib/config/rpc-client';
+	import { toast } from 'svelte-sonner';
 
-{#each data.websites as website}
-	<article>{website.name}</article>
-{/each}
+	// Query — pass a thunk for reactive inputs
+	const storeQuery = createQuery(() => api.stores.get.queryOptions({ input: { storeId } }));
+
+	// Mutation — fire-and-forget, error-only toasts, invalidate on settle
+	const queryClient = useQueryClient();
+	const updateMutation = createMutation(() =>
+		api.stores.updateSettings.mutationOptions({
+			onError: (error) => toast.error(error.message || 'Failed to save'),
+			onSettled: () => {
+				queryClient.invalidateQueries({ queryKey: api.stores.get.key({ input: { storeId } }) });
+			}
+		})
+	);
+</script>
 ```
 
-### Benefits of This Architecture
+**Adding a new endpoint:**
 
-1. **Clear Separation**: Page loads for reads, remote functions for writes
-2. **Type Safety**: Full type inference from server to client
-3. **Built-in Validation**: Zod schemas integrated into remote functions
-4. **SSR by Default**: All data loaded server-side automatically
+1. Add procedure to `src/lib/features/<name>/server/router.ts`
+2. Register in `src/lib/server/rpc/router.ts`
+3. Use `api.<feature>.<procedure>.queryOptions()` or `.mutationOptions()` in components
+
+### Page Server Loads
+
+`+page.server.ts` files still handle auth redirects and provide `orgId` to the page. They do NOT fetch data for the dashboard (that's done client-side via TanStack Query).
+
+```typescript
+// routes/(session)/stores/[storeId]/+page.server.ts
+export const load: PageServerLoad = async ({ locals }) => {
+	if (!locals.user || !locals.activeOrganization) redirect(302, '/sign-in');
+	return { orgId: locals.activeOrganization.id };
+};
+```
 
 ---
 
@@ -611,24 +527,24 @@ See CLAUDE.md for detailed pagination implementation including:
 ```typescript
 import { buildPaginatedQuery, type PaginationParams } from '$lib/server/db/utils';
 
-export async function listChannels(
+export async function listStores(
 	orgId: string,
 	pagination?: PaginationParams
-): Promise<PaginatedQueryResult<Channel>> {
+): Promise<PaginatedQueryResult<Store>> {
 	const page = pagination?.page ?? 1;
 	const limit = pagination?.limit ?? 20;
 	const offset = (page - 1) * limit;
 
-	const query = db.query.channel.findMany({
-		where: eq(schema.channel.organizationId, orgId),
+	const query = db.query.store.findMany({
+		where: eq(schema.store.organizationId, orgId),
 		limit,
 		offset
 	});
 
 	const countQuery = db
 		.select({ count: sql<number>`count(*)` })
-		.from(schema.channel)
-		.where(eq(schema.channel.organizationId, orgId));
+		.from(schema.store)
+		.where(eq(schema.store.organizationId, orgId));
 
 	return await buildPaginatedQuery(query, countQuery, { page, limit });
 }
@@ -650,9 +566,11 @@ export async function listChannels(
    - Add schema to `lib/server/db/schema/`
    - Generate migration: `pnpm run db:generate`
    - Implement repository (required)
-   - Add service or mutations layer only if needed (optional)
+   - Add service layer only if needed (optional)
    - Create validators and types
-   - Add page load functions or remote functions in routes
+   - Create oRPC router at `lib/features/<name>/server/router.ts`
+   - Register in `lib/server/rpc/router.ts`
+   - Use `api.<feature>.*` in components with TanStack Query
 
 3. **Database Changes:**
    ```bash
@@ -675,16 +593,15 @@ This architecture provides:
 
 ### Recommended Approach
 
-1. **Page Loads for Reads**: Use `+page.server.ts` for all data fetching
-2. **Remote Functions for Writes**: Use `form` and `command` functions
-3. **Feature-First Organization**: Co-locate all feature code
-4. **Kebab-Case File Names**: Use kebab-case for files/folders
-5. **Start with Repository**: Always create a repository, add service/mutations only when needed
+1. **oRPC + TanStack Query for Dashboard**: Use `createQuery`/`createMutation` with `api.*` for all dashboard data
+2. **Feature-First Organization**: Co-locate all feature code including `server/router.ts`
+3. **Kebab-Case File Names**: Use kebab-case for files/folders
+4. **Start with Repository**: Always create a repository, add service/mutations only when needed
+5. **Linear-Style Mutations**: Fire-and-forget, no spinners, error-only toasts, `useFlash` for save indicators
 6. **Minimal Logging**: Log errors and mutations, not simple getters
 7. **Consistent Null Handling**: Use `?? null` for all nullable returns
 8. **Pagination**: Use `PaginationParams` and `buildPaginatedQuery` from `$lib/server/db/utils`
 9. **Self-Documenting Code**: Avoid file header comments, let code speak for itself
-10. **Evolve as Needed**: Add abstractions only when complexity demands it
 
 ---
 
@@ -838,7 +755,7 @@ import { stack } from '@svelte-put/async-stack';
 
 export const modalStack = stack()
 	.addVariant('confirm', ConfirmationModal)
-	.addVariant('addWebsite', AddWebsiteModal)
+	.addVariant('addStore', AddStoreModal)
 	// ... other variants
 	.build();
 ```
@@ -966,7 +883,7 @@ const logger = createContextLogger('feature-name');
 logger.info('User logged in', { userId: '123', email: 'user@example.com' });
 logger.warn('Rate limit approaching', { current: 95, max: 100 });
 logger.error('Database query failed', error, { query: 'SELECT...' });
-logger.success('Job published', { jobId: 'abc', slug: 'software-engineer' });
+logger.success('Render completed', { renderId: 'abc', storeId: 'store-123' });
 ```
 
 ### Operation Tracking
@@ -976,30 +893,30 @@ Use operations to track multi-step processes with timing:
 ```typescript
 import { createContextLogger } from '$lib/server/logger';
 
-const logger = createContextLogger('job-service');
-const operation = logger.start('Create job posting', {
-	title: 'Software Engineer',
-	company: 'Acme Corp'
+const logger = createContextLogger('render-service');
+const operation = logger.start('Process render request', {
+	productId: 'prod-123',
+	type: 'room'
 });
 
 try {
 	// Log steps in the operation
-	operation.step('Validating data');
-	await validateJobData(data);
+	operation.step('Validating image');
+	await validateImage(data);
 
-	operation.step('Generating slug');
-	const slug = await generateUniqueSlug(data.title);
+	operation.step('Calling AI service');
+	const result = await aiService.render(data);
 
-	operation.step('Saving to database');
-	const job = await db.jobs.create(data);
+	operation.step('Saving result');
+	const render = await db.renders.create(result);
 
 	// End successfully with timing
-	operation.end({ jobId: job.id, slug });
+	operation.end({ renderId: render.id });
 
-	return job;
+	return render;
 } catch (error) {
 	// End with error (includes timing and captures in Sentry)
-	operation.error('Failed to create job', error, { title: data.title });
+	operation.error('Failed to process render', error, { productId: data.productId });
 	throw error;
 }
 ```
@@ -1011,21 +928,20 @@ try {
 Clean, professional span-style output:
 
 ```
-job-service          a1b2c3d4 │ ┌ Create job posting · title=Software Engineer, company=Acme Corp
-job-service          a1b2c3d4 │ ├ Validating data
-job-service          a1b2c3d4 │ ├ Generating slug
-job-service          a1b2c3d4 │   · Slug generated: software-engineer
-job-service          a1b2c3d4 │ ├ Saving to database
-job-service          a1b2c3d4 │ └ Create job posting ✓ 145ms · jobId=abc123
+render-service       a1b2c3d4 │ ┌ Process render request · productId=prod-123, type=room
+render-service       a1b2c3d4 │ ├ Validating image
+render-service       a1b2c3d4 │ ├ Calling AI service
+render-service       a1b2c3d4 │ ├ Saving result
+render-service       a1b2c3d4 │ └ Process render request ✓ 2450ms · renderId=rnd-456
 ```
 
 Error example:
 
 ```
-job-service          a1b2c3d4 │ ┌ Create job posting · title=Software Engineer
-job-service          a1b2c3d4 │ ├ Validating data
-job-service          a1b2c3d4 │ └ Create job posting ✗ 12ms
-    ↳ ValidationError: Title must be at least 10 characters
+render-service       a1b2c3d4 │ ┌ Process render request · productId=prod-123
+render-service       a1b2c3d4 │ ├ Validating image
+render-service       a1b2c3d4 │ └ Process render request ✗ 120ms
+    ↳ ValidationError: Image must be at least 800x600 pixels
 ```
 
 #### Production (Vercel, Log Aggregators)
@@ -1033,27 +949,9 @@ job-service          a1b2c3d4 │ └ Create job posting ✗ 12ms
 Structured JSON output for easy parsing and filtering:
 
 ```json
-{"timestamp":"2025-12-02T20:34:26.862Z","level":"info","context":"job-service","message":"Create job posting","requestId":"a1b2c3d4","userId":"user_123","title":"Software Engineer","company":"Acme Corp"}
-{"timestamp":"2025-12-02T20:34:26.895Z","level":"info","context":"job-service","message":"Validating data","requestId":"a1b2c3d4","userId":"user_123"}
-{"timestamp":"2025-12-02T20:34:27.012Z","level":"info","context":"job-service","message":"Create job posting 145ms","requestId":"a1b2c3d4","userId":"user_123","jobId":"abc123"}
-```
-
-Error example with structured error object:
-
-```json
-{
-	"timestamp": "2025-12-02T20:34:26.862Z",
-	"level": "error",
-	"context": "job-service",
-	"message": "Create job posting 12ms",
-	"requestId": "a1b2c3d4",
-	"userId": "user_123",
-	"error": {
-		"message": "Title must be at least 10 characters",
-		"stack": "ValidationError: Title must be at least 10 characters\n    at validate...",
-		"name": "ValidationError"
-	}
-}
+{"timestamp":"2025-12-02T20:34:26.862Z","level":"info","context":"render-service","message":"Process render request","requestId":"a1b2c3d4","userId":"user_123","productId":"prod-123","type":"room"}
+{"timestamp":"2025-12-02T20:34:26.895Z","level":"info","context":"render-service","message":"Validating image","requestId":"a1b2c3d4","userId":"user_123"}
+{"timestamp":"2025-12-02T20:34:29.312Z","level":"info","context":"render-service","message":"Process render request 2450ms","requestId":"a1b2c3d4","userId":"user_123","renderId":"rnd-456"}
 ```
 
 ## API Reference
@@ -1068,7 +966,7 @@ const logger = createContextLogger('auth', { component: 'oauth' });
 
 **Parameters:**
 
-- `context` (string) - Context name for this logger (e.g., 'auth', 'payments', 'jobs')
+- `context` (string) - Context name for this logger (e.g., 'auth', 'renders', 'billing')
 - `metadata` (object, optional) - Additional metadata to include in all logs
 
 **Returns:** `Logger` instance
@@ -1080,9 +978,9 @@ const logger = createContextLogger('auth', { component: 'oauth' });
 Start a tracked operation with timing and OpenTelemetry span.
 
 ```typescript
-const operation = logger.start('Process payment', {
-	amount: 5000,
-	currency: 'USD'
+const operation = logger.start('Process render', {
+	storeId: 'store-123',
+	productId: 'prod-456'
 });
 ```
 
@@ -1101,7 +999,7 @@ logger.info('User profile updated', { userId: '123', fields: ['name', 'email'] }
 Log success message.
 
 ```typescript
-logger.success('Email sent', { to: 'user@example.com', template: 'welcome' });
+logger.success('Render completed', { renderId: 'rnd-123', duration: 2500 });
 ```
 
 #### logger.warn(message, metadata?)
@@ -1109,7 +1007,7 @@ logger.success('Email sent', { to: 'user@example.com', template: 'welcome' });
 Log warning message.
 
 ```typescript
-logger.warn('Cache miss', { key: 'user:123', ttl: 3600 });
+logger.warn('Cache miss', { key: 'store:123', ttl: 3600 });
 ```
 
 #### logger.error(message, error?, metadata?)
@@ -1117,9 +1015,9 @@ logger.warn('Cache miss', { key: 'user:123', ttl: 3600 });
 Log error message and capture in Sentry (production only).
 
 ```typescript
-logger.error('Payment failed', error, {
-	orderId: '123',
-	provider: 'stripe'
+logger.error('Render failed', error, {
+	storeId: 'store-123',
+	productId: 'prod-456'
 });
 ```
 
@@ -1175,9 +1073,9 @@ All loggers created with `createContextLogger()` will automatically include the 
 Errors are automatically captured in Sentry in production:
 
 ```typescript
-logger.error('Payment processing failed', error, {
-	orderId: 'order-123',
-	amount: 5000
+logger.error('Render processing failed', error, {
+	renderId: 'rnd-123',
+	storeId: 'store-456'
 });
 // Automatically sent to Sentry with full context
 ```
@@ -1204,9 +1102,9 @@ operation.end();
 
 ```typescript
 // Good
-const logger = createContextLogger('job-posting');
-const logger = createContextLogger('payment-webhook');
-const logger = createContextLogger('email-service');
+const logger = createContextLogger('render-service');
+const logger = createContextLogger('billing-webhook');
+const logger = createContextLogger('widget-api');
 
 // Bad
 const logger = createContextLogger('service');
@@ -1218,21 +1116,21 @@ const logger = createContextLogger('handler');
 Wrap multi-step processes with operations:
 
 ```typescript
-const operation = logger.start('Send welcome email', {
-	userId: user.id,
-	email: user.email
+const operation = logger.start('Process render', {
+	storeId: store.id,
+	productId: product.id
 });
 
 try {
-	operation.step('Rendering template');
-	const html = await renderTemplate('welcome', { user });
+	operation.step('Validating image');
+	const validated = await validateImage(image);
 
-	operation.step('Sending email');
-	await emailProvider.send({ to: user.email, html });
+	operation.step('Calling AI service');
+	const result = await aiService.render(validated);
 
-	operation.end();
+	operation.end({ renderId: result.id });
 } catch (error) {
-	operation.error('Failed to send welcome email', error);
+	operation.error('Failed to process render', error);
 	throw error;
 }
 ```
@@ -1243,14 +1141,14 @@ Add context that helps debugging:
 
 ```typescript
 // Good - includes identifiers and relevant data
-logger.error('Order not found', error, {
-	orderId: 'order-123',
-	userId: 'user-456',
-	provider: 'stripe'
+logger.error('Render failed', error, {
+	renderId: 'rnd-123',
+	storeId: 'store-456',
+	productId: 'prod-789'
 });
 
 // Bad - missing context
-logger.error('Not found', error);
+logger.error('Failed', error);
 ```
 
 ### 4. Don't Bloat Logs
@@ -1259,9 +1157,9 @@ Avoid logging every minor step:
 
 ```typescript
 // Good - logs important steps
-operation.step('Validating payment');
-operation.step('Creating order');
-operation.step('Sending confirmation');
+operation.step('Validating image');
+operation.step('Calling AI service');
+operation.step('Saving result');
 
 // Bad - too much noise
 operation.step('Creating variable');
@@ -1273,29 +1171,29 @@ operation.step('Returning value');
 
 ```typescript
 // Info - normal operation
-logger.info('User logged in', { userId: '123' });
+logger.info('Render started', { renderId: '123' });
 
 // Success - important positive outcome
-logger.success('Payment processed', { orderId: '123', amount: 5000 });
+logger.success('Render completed', { renderId: '123', duration: 2500 });
 
 // Warn - potential issue, but not critical
-logger.warn('High memory usage', { usage: 85, threshold: 80 });
+logger.warn('High latency detected', { duration: 5000, threshold: 3000 });
 
 // Error - actual error requiring attention
-logger.error('Database connection failed', error);
+logger.error('AI service connection failed', error);
 ```
 
 ### 6. Child Loggers for Related Operations
 
 ```typescript
-const logger = createContextLogger('payment-system');
+const logger = createContextLogger('render-system');
 
-// Create child logger for webhook handling
-const webhookLogger = logger.child('webhook', {
-	provider: 'stripe',
-	eventType: event.type
+// Create child logger for specific store
+const storeLogger = logger.child('store-webhook', {
+	storeId: store.id,
+	platform: store.platform
 });
 
-webhookLogger.info('Processing webhook');
-webhookLogger.success('Webhook processed');
+storeLogger.info('Processing webhook');
+storeLogger.success('Webhook processed');
 ```

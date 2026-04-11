@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { StackItemProps } from '@svelte-put/async-stack';
-	import { restoreProjectCommand } from '$lib/features/projects/projects.remote';
+	import { orpc } from '$lib/config/rpc-client';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import * as Alert from '$lib/components/ui/alert/index.js';
@@ -35,7 +35,7 @@
 		error = null;
 
 		try {
-			await restoreProjectCommand({
+			await orpc.projects.restore({
 				projectId,
 				organizationId
 			});

@@ -6,6 +6,7 @@
 	import '../app.css';
 	import { ModeWatcher } from 'mode-watcher';
 	import { AuthUIProvider } from 'better-auth-ui-svelte';
+	import { QueryClientProvider } from '@tanstack/svelte-query';
 	import { authClient } from '$lib/client/auth/auth-client';
 	import { toast, Toaster } from 'svelte-sonner';
 	import { setSiteConfig, useSiteConfig } from '$lib/hooks/use-site-config.svelte';
@@ -89,16 +90,18 @@
 <!-- PWA Install prompt -->
 <PwaInstall manifestUrl="/manifest.webmanifest" useLocalStorage={true} />
 
-<AuthUIProvider
-	{authClient}
-	credentials={true}
-	emailOTP={true}
-	{toast}
-	basePath={authPathConfig.basePath}
-	viewPaths={authPathConfig.viewPaths}
-	organization={true}
->
-	<ModalStackProvider>
-		{@render children()}
-	</ModalStackProvider>
-</AuthUIProvider>
+<QueryClientProvider client={data.queryClient}>
+	<AuthUIProvider
+		{authClient}
+		credentials={true}
+		emailOTP={true}
+		{toast}
+		basePath={authPathConfig.basePath}
+		viewPaths={authPathConfig.viewPaths}
+		organization={true}
+	>
+		<ModalStackProvider>
+			{@render children()}
+		</ModalStackProvider>
+	</AuthUIProvider>
+</QueryClientProvider>

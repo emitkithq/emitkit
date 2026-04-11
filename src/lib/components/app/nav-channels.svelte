@@ -1,7 +1,7 @@
 <script lang="ts">
 	import HashIcon from '@lucide/svelte/icons/hash';
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
-	import { listChannelsQuery } from '$lib/features/channels/channels.remote';
+	import { orpc } from '$lib/config/rpc-client';
 	import { useCurrentOrganization } from 'better-auth-ui-svelte';
 
 	const organization = useCurrentOrganization();
@@ -11,7 +11,7 @@
 			return Promise.resolve({ items: [], total: 0 });
 		}
 
-		return listChannelsQuery({ organizationId: organization.data?.id, page: 1, limit: 50 });
+		return orpc.channels.list({ organizationId: organization.data?.id, page: 1, limit: 50 });
 	});
 </script>
 

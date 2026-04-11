@@ -12,7 +12,7 @@
 	import { cn } from '$lib/utils/ui.js';
 	import { motion } from '$lib/utils/motion.js';
 	import EventListItemMetadata from './event-list-item-metadata.svelte';
-	import { deleteEventCommand } from '$lib/features/events/events.remote';
+	import { orpc } from '$lib/config/rpc-client';
 	import { goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
 
@@ -62,7 +62,7 @@
 		if (confirmTimer) clearTimeout(confirmTimer);
 
 		try {
-			await deleteEventCommand({
+			await orpc.events.delete({
 				eventId: event.id,
 				channelId,
 				organizationId

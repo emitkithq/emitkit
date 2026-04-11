@@ -9,15 +9,7 @@ const config = {
 	kit: {
 		adapter: adapter({
 			runtime: 'nodejs20.x'
-		}),
-		experimental: {
-			remoteFunctions: true
-		}
-	},
-	compilerOptions: {
-		experimental: {
-			async: true
-		}
+		})
 	}
 };
 

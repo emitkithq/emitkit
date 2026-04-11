@@ -1,9 +1,9 @@
 <script lang="ts">
 	import type { StackItemProps } from '@svelte-put/async-stack';
-	import { createChannelForm, suggestEmojiCommand } from '$lib/features/channels/channels.remote';
+	import { orpc } from '$lib/config/rpc-client';
 	import * as Field from '$lib/components/ui/field/index.js';
-	import { Button } from '$lib/components/ui/button/index.js';
 	import { Textarea } from '$lib/components/ui/textarea/index.js';
+	import { Button } from '$lib/components/ui/button/index.js';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import * as EmojiPicker from '$lib/components/ui/emoji-picker';
 	import * as Popover from '$lib/components/ui/popover';
@@ -25,15 +25,17 @@
 		projectId
 	}: StackItemProps<{ success: boolean; channelId?: string }> & Props = $props();
 
-	// Create a unique form instance for this modal using a unique key
-	const formKey = `channel-modal-${Math.random().toString(36).substring(2, 9)}`;
-	const form = createChannelForm.for(formKey);
+	// Form state
+	let name = $state('');
+	let description = $state('');
 
 	// Emoji picker state
 	let selectedEmoji = $state<string>('');
 	let emojiPickerOpen = $state(false);
 	let emojiPickerMounted = $state(false);
 	let isSuggestingEmoji = $state(false);
+	let isSubmitting = $state(false);
+	let errors = $state<Record<string, string>>({});
 
 	// Mount emoji picker on first open to defer heavy initialization
 	$effect(() => {
@@ -42,30 +44,16 @@
 		}
 	});
 
-	// Helper to safely get field issues
-	type FormField = {
-		issues?: () => Array<{ message: string }> | undefined;
-	};
-
-	function getIssues(field: FormField | undefined): Array<{ message: string }> {
-		return field?.issues?.() ?? [];
-	}
-
-	// Watch for pending state (pending is a counter of pending requests)
-	const isPending = $derived(form.pending > 0);
-
 	// Handle AI emoji suggestion
 	async function handleAISuggestion() {
-		const channelName = form.fields.name.value();
-
-		if (!channelName || channelName.trim() === '' || channelName.length < 3) {
+		if (!name || name.trim() === '' || name.length < 3) {
 			return;
 		}
 
 		isSuggestingEmoji = true;
 
 		try {
-			const result = await suggestEmojiCommand({ channelName: channelName.trim() });
+			const result = await orpc.channels.suggestEmoji({ channelName: name.trim() });
 
 			if (result && result.emoji) {
 				selectedEmoji = result.emoji;
@@ -82,20 +70,37 @@
 		item.resolve({ success: false });
 	}
 
-	// Watch for successful submission
-	let previousPending = $state(0);
-	$effect(() => {
-		// When form goes from pending to not pending, check if we got a successful result
-		if (previousPending > 0 && form.pending === 0) {
-			// Form submission completed - close modal
-			// You may need to check a success state here
+	// Handle submit
+	async function handleSubmit(e: SubmitEvent) {
+		e.preventDefault();
+		errors = {};
+
+		if (!name || name.trim().length < 3) {
+			errors.name = 'Channel name must be at least 3 characters';
+			return;
+		}
+
+		isSubmitting = true;
+
+		try {
+			const channel = await orpc.channels.create({
+				projectId,
+				organizationId,
+				name: name.trim(),
+				icon: selectedEmoji || undefined,
+				description: description || undefined
+			});
+
 			item.resolve({
 				success: true,
-				channelId: '' // This would come from the form result
+				channelId: channel.id
 			});
+		} catch (error) {
+			console.error('Failed to create channel:', error);
+			errors.form = error instanceof Error ? error.message : 'Failed to create channel';
+			isSubmitting = false;
 		}
-		previousPending = form.pending;
-	});
+	}
 </script>
 
 <Dialog.Root open={true}>
@@ -107,14 +112,10 @@
 			</Dialog.Description>
 		</Dialog.Header>
 
-		<form {...form} class="space-y-6">
-			<!-- Hidden organizationId and projectId fields -->
-			<input {...form.fields.organizationId.as('text')} type="hidden" value={organizationId} />
-			<input {...form.fields.projectId.as('text')} type="hidden" value={projectId} />
-
+		<form onsubmit={handleSubmit} class="space-y-6">
 			<Field.Group>
 				<!-- Channel Name with Emoji Picker -->
-				<Field.Field data-invalid={getIssues(form.fields.name).length > 0}>
+				<Field.Field data-invalid={!!errors.name}>
 					<Field.Label for="channel-name">Channel Name *</Field.Label>
 					<InputGroup.Root data-disabled={isSuggestingEmoji}>
 						<!-- Emoji Picker Popover (Left) -->
@@ -186,8 +187,8 @@
 						<InputGroup.Input
 							id="channel-name"
 							placeholder="e.g. General, Announcements, Support"
-							{...form.fields.name.as('text')}
-							aria-invalid={getIssues(form.fields.name).length > 0}
+							bind:value={name}
+							aria-invalid={!!errors.name}
 						/>
 
 						<!-- AI Suggestion Button (Right) -->
@@ -209,42 +210,35 @@
 						</InputGroup.Addon>
 					</InputGroup.Root>
 
-					<!-- Hidden icon field -->
-					<input {...form.fields.icon.as('text')} type="hidden" value={selectedEmoji} />
-
 					<Field.Description>
 						A descriptive name for your channel. Click the sparkle icon for AI emoji suggestion.
 					</Field.Description>
-					{#each getIssues(form.fields.name) as issue, i (i)}
-						<Field.Error>{issue.message}</Field.Error>
-					{/each}
+					{#if errors.name}
+						<Field.Error>{errors.name}</Field.Error>
+					{/if}
 				</Field.Field>
 
 				<!-- Channel Description -->
-				<Field.Field data-invalid={getIssues(form.fields.description).length > 0}>
+				<Field.Field>
 					<Field.Label for="channel-description">Description</Field.Label>
 					<Textarea
 						id="channel-description"
 						placeholder="What is this channel for?"
-						{...form.fields.description.as('text')}
+						bind:value={description}
 						rows={3}
-						aria-invalid={getIssues(form.fields.description).length > 0}
 					/>
 					<Field.Description>
 						Optional description to help users understand the channel's purpose
 					</Field.Description>
-					{#each getIssues(form.fields.description) as issue, i (i)}
-						<Field.Error>{issue.message}</Field.Error>
-					{/each}
 				</Field.Field>
 			</Field.Group>
 
 			<Dialog.Footer>
-				<Button type="button" variant="outline" onclick={handleCancel} disabled={isPending}>
+				<Button type="button" variant="outline" onclick={handleCancel} disabled={isSubmitting}>
 					Cancel
 				</Button>
-				<Button type="submit" disabled={isPending}>
-					{isPending ? 'Creating...' : 'Create Channel'}
+				<Button type="submit" disabled={isSubmitting}>
+					{isSubmitting ? 'Creating...' : 'Create Channel'}
 				</Button>
 			</Dialog.Footer>
 		</form>

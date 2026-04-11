@@ -13,6 +13,8 @@
 		type GroupedEvents
 	} from '$lib/features/events/utils/time-grouping';
 	import { SvelteSet, SvelteMap } from 'svelte/reactivity';
+	import { orpc } from '$lib/config/rpc-client';
+	import { consumeEventIterator } from '@orpc/client';
 
 	let {
 		organizationId,
@@ -80,33 +82,35 @@
 		})).filter((g) => g.events.length > 0);
 	});
 
-	// Setup SSE connection reactively when props change
+	// Setup oRPC event iterator streaming
 	$effect(() => {
-		// Determine SSE endpoint based on whether we're in channel-specific view
-		const sseEndpoint =
-			channelId && projectId ? `/events/${projectId}/${channelId}/stream` : `/stream`;
+		// Build the correct stream call based on whether we're channel-specific or org-wide
+		const streamPromise =
+			channelId && projectId
+				? orpc.events.streamByChannel({ channelId, organizationId })
+				: orpc.events.streamByOrg({ organizationId });
 
-		const eventSource = new EventSource(sseEndpoint);
+		const cancel = consumeEventIterator(streamPromise, {
+			onEvent: (message) => {
+				if (message.type === 'event' && message.data) {
+					const eventData = message.data;
+					const streamedAt = Date.now();
+					const event: EventWithNewStatus = {
+						...eventData,
+						createdAt: new Date(eventData.createdAt),
+						isNew: true,
+						streamedAt
+					};
 
-		eventSource.addEventListener('message', async (e) => {
-			const message = JSON.parse(e.data);
-
-			if (message.type === 'event' && message.data) {
-				// Convert createdAt string to Date object
-				const eventData = message.data;
-				const streamedAt = Date.now();
-				const event: EventWithNewStatus = {
-					...eventData,
-					createdAt: new Date(eventData.createdAt),
-					isNew: true, // Mark as new since it's streaming in real-time
-					streamedAt
-				};
-
-				// Only add if we haven't seen this event before
-				if (!loadedEventIds.has(event.id)) {
-					loadedEventIds.add(event.id);
-					allEvents = [event, ...allEvents]; // Prepend new events to the top
+					// Only add if we haven't seen this event before
+					if (!loadedEventIds.has(event.id)) {
+						loadedEventIds.add(event.id);
+						allEvents = [event, ...allEvents];
+					}
 				}
+			},
+			onError: (error) => {
+				console.error('Event stream error:', error);
 			}
 		});
 
@@ -121,11 +125,11 @@
 				}
 				return event;
 			});
-		}, 5000); // Check every 5 seconds
+		}, 5000);
 
 		// Cleanup when props change or component unmounts
 		return () => {
-			eventSource.close();
+			cancel();
 			clearInterval(interval);
 		};
 	});

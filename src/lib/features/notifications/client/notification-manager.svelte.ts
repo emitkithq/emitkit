@@ -3,11 +3,7 @@ import type {
 	NotificationPermissionState,
 	BrowserSupport
 } from '$lib/features/notifications/types';
-import {
-	subscribeToPushCommand,
-	unsubscribeFromPushCommand,
-	getPublicVapidKeyCommand
-} from '../notifications.remote';
+import { orpc } from '$lib/config/rpc-client';
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
 	const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
@@ -135,7 +131,7 @@ class NotificationManager {
 
 		try {
 			// Get VAPID public key from server
-			const { publicKey } = await getPublicVapidKeyCommand();
+			const { publicKey } = await orpc.notifications.getPublicVapidKey({});
 
 			// Get service worker registration
 			const registration = await navigator.serviceWorker.ready;
@@ -154,7 +150,7 @@ class NotificationManager {
 			const authKey = subscriptionJson.keys?.auth || '';
 
 			// Save subscription to server
-			await subscribeToPushCommand({
+			await orpc.notifications.subscribeToPush({
 				endpoint,
 				p256dhKey,
 				authKey,
@@ -202,7 +198,7 @@ class NotificationManager {
 			const authKey = subscriptionJson.keys?.auth || '';
 
 			// Update subscription on server
-			await subscribeToPushCommand({
+			await orpc.notifications.subscribeToPush({
 				endpoint: subscription.endpoint,
 				p256dhKey,
 				authKey,
@@ -241,7 +237,7 @@ class NotificationManager {
 			}
 
 			// Remove subscription from server
-			await unsubscribeFromPushCommand({
+			await orpc.notifications.unsubscribeFromPush({
 				endpoint: this._currentEndpoint
 			});
 

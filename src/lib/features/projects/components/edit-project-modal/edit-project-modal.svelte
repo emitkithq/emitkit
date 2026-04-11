@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { StackItemProps } from '@svelte-put/async-stack';
-	import { updateProjectForm } from '$lib/features/projects/projects.remote';
+	import { orpc } from '$lib/config/rpc-client';
 	import * as Field from '$lib/components/ui/field/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
@@ -26,21 +26,10 @@
 	}: StackItemProps<{ success: boolean; folderName?: string; folderUrl?: string | null }> &
 		Props = $props();
 
-	// Create a unique form instance for this modal using a unique key
-	const formKey = `edit-folder-modal-${Math.random().toString(36).substring(2, 9)}`;
-	const form = updateProjectForm.for(formKey);
-
-	// Helper to safely get field issues
-	type FormField = {
-		issues?: () => Array<{ message: string }> | undefined;
-	};
-
-	function getIssues(field: FormField | undefined): Array<{ message: string }> {
-		return field?.issues?.() ?? [];
-	}
-
-	// Watch for pending state (pending is a counter of pending requests)
-	const isPending = $derived(form.pending > 0);
+	// Form state
+	let name = $state(currentName);
+	let url = $state(currentUrl || '');
+	let isSubmitting = $state(false);
 	let error = $state<string | null>(null);
 
 	// Handle cancel
@@ -50,37 +39,39 @@
 
 	// Handle clear URL
 	function handleClearUrl() {
-		const urlInput = document.getElementById('folder-url') as HTMLInputElement;
-		if (urlInput) {
-			urlInput.value = '';
-		}
+		url = '';
 	}
 
-	// Watch for successful submission
-	let previousPending = $state(form.pending);
-	$effect(() => {
-		// When form transitions from pending (1+) to not pending (0)
-		if (previousPending > 0 && form.pending === 0) {
-			// Check if there are no field errors (successful submission)
-			const hasErrors =
-				form.fields.name.issues()?.length ||
-				form.fields.url?.issues?.()?.length ||
-				form.fields.projectId.issues()?.length ||
-				form.fields.organizationId.issues()?.length;
+	// Handle submit
+	async function handleSubmit(e: SubmitEvent) {
+		e.preventDefault();
 
-			if (!hasErrors) {
-				// Submission was successful
-				const newName = form.fields.name.value();
-				const newUrl = form.fields.url?.value?.();
-				item.resolve({
-					success: true,
-					folderName: newName,
-					folderUrl: newUrl
-				});
-			}
+		if (!name || name.trim().length < 1) {
+			error = 'Project name is required';
+			return;
 		}
-		previousPending = form.pending;
-	});
+
+		isSubmitting = true;
+		error = null;
+
+		try {
+			await orpc.projects.updateForm({
+				projectId,
+				organizationId,
+				name: name.trim(),
+				url: url || undefined
+			});
+
+			item.resolve({
+				success: true,
+				folderName: name.trim(),
+				folderUrl: url || null
+			});
+		} catch (err) {
+			error = err instanceof Error ? err.message : 'Failed to update project';
+			isSubmitting = false;
+		}
+	}
 </script>
 
 <Dialog.Root open={true}>
@@ -92,11 +83,7 @@
 			</Dialog.Description>
 		</Dialog.Header>
 
-		<form {...form} class="space-y-6">
-			<!-- Hidden projectId and organizationId fields -->
-			<input {...form.fields.projectId.as('text')} type="hidden" value={projectId} />
-			<input {...form.fields.organizationId.as('text')} type="hidden" value={organizationId} />
-
+		<form onsubmit={handleSubmit} class="space-y-6">
 			<!-- Error Display -->
 			{#if error}
 				<Alert.Root variant="destructive">
@@ -107,33 +94,18 @@
 
 			<Field.Group>
 				<!-- Folder Name -->
-				<Field.Field data-invalid={getIssues(form.fields.name).length > 0}>
+				<Field.Field>
 					<Field.Label for="folder-name">Folder Name *</Field.Label>
-					<Input
-						id="folder-name"
-						placeholder="Enter project name"
-						{...form.fields.name.as('text')}
-						value={currentName}
-						aria-invalid={getIssues(form.fields.name).length > 0}
-					/>
+					<Input id="folder-name" placeholder="Enter project name" bind:value={name} />
 					<Field.Description>Choose a descriptive name for your folder</Field.Description>
-					{#each getIssues(form.fields.name) as issue, i (i)}
-						<Field.Error>{issue.message}</Field.Error>
-					{/each}
 				</Field.Field>
 
 				<!-- Website URL -->
-				<Field.Field data-invalid={getIssues(form.fields.url).length > 0}>
+				<Field.Field>
 					<Field.Label for="folder-url">Website URL</Field.Label>
 					<div class="relative">
-						<Input
-							id="folder-url"
-							placeholder="https://example.com"
-							{...form.fields.url.as('text')}
-							value={currentUrl || ''}
-							aria-invalid={getIssues(form.fields.url).length > 0}
-						/>
-						{#if currentUrl}
+						<Input id="folder-url" placeholder="https://example.com" bind:value={url} />
+						{#if url}
 							<button
 								type="button"
 								onclick={handleClearUrl}
@@ -147,18 +119,15 @@
 					<Field.Description>
 						Optional: Add a website URL to display its favicon in the folder list
 					</Field.Description>
-					{#each getIssues(form.fields.url) as issue, i (i)}
-						<Field.Error>{issue.message}</Field.Error>
-					{/each}
 				</Field.Field>
 			</Field.Group>
 
 			<Dialog.Footer>
-				<Button type="button" variant="outline" onclick={handleCancel} disabled={isPending}>
+				<Button type="button" variant="outline" onclick={handleCancel} disabled={isSubmitting}>
 					Cancel
 				</Button>
-				<Button type="submit" disabled={isPending}>
-					{isPending ? 'Saving...' : 'Save Changes'}
+				<Button type="submit" disabled={isSubmitting}>
+					{isSubmitting ? 'Saving...' : 'Save Changes'}
 				</Button>
 			</Dialog.Footer>
 		</form>
