@@ -106,7 +106,7 @@
 		"vite-plugin-devtools-json": "^1.0.0",
 		"vite-plugin-pwa": "^1.2.0",
 		"vitest": "^4.0.15",
-		"workbox-window": "^7.4.0"
+		"workbox-precaching": "^7.4.0"
 	},
 	"dependencies": {
 		"@ai-sdk/openai": "^2.0.77",

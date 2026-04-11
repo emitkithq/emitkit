@@ -16,7 +16,7 @@
 				"name": "workflow"
 			}
 		],
-		"types": ["dom-chromium-installation-events", "web-app-manifest"]
+		"types": ["dom-chromium-installation-events", "web-app-manifest", "vite-plugin-pwa/client"]
 	}
 	// Path aliases are handled by https://svelte.dev/docs/kit/configuration#alias
 	// except $lib which is handled by https://svelte.dev/docs/kit/configuration#files
