@@ -126,7 +126,6 @@
 		"@tanstack/svelte-form": "^1.27.1",
 		"@tanstack/svelte-query": "^6.1.14",
 		"@tanstack/zod-form-adapter": "^0.42.1",
-		"@upstash/redis": "^1.35.7",
 		"@upstash/workflow": "^0.2.23",
 		"@vercel/functions": "^3.3.4",
 		"ai": "^5.0.107",

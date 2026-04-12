@@ -3,12 +3,6 @@ import { createEvent } from './repository';
 import { db, schema } from '$lib/server/db';
 import { eq } from 'drizzle-orm';
 import { createContextLogger } from '$lib/server/logger';
-import {
-	invalidateChannelCache,
-	invalidateOrganizationCache,
-	publishToChannel
-} from '$lib/server/cache';
-import { waitUntil } from '$lib/server/wait-until';
 import { triggerWorkflow } from '$lib/server/workflow';
 
 const logger = createContextLogger('events');
@@ -26,37 +20,19 @@ export async function createAndBroadcastEvent(event: EventInsert): Promise<Event
 
 	const projectId = channel.projectId;
 
-	// 1. Create the event in Tinybird
+	// 1. Create the event in Postgres
 	const createdEvent = await createEvent(event, projectId ?? undefined);
 
-	// 2. Fire-and-forget non-critical side effects
-	waitUntil(
-		Promise.all([
-			invalidateChannelCache(event.channelId),
-			invalidateOrganizationCache(event.organizationId),
-			publishToChannel(`events:channel:${event.channelId}`, {
-				type: 'event',
-				data: createdEvent
-			})
-		]).catch((error) => {
-			logger.error('Non-critical side effects failed', error instanceof Error ? error : undefined, {
-				eventId: createdEvent.id,
-				channelId: event.channelId
-			});
-		})
-	);
-
-	// 3. Trigger Upstash Workflow for critical side effects
+	// 2. Trigger Upstash Workflow for critical side effects (push notifications, webhooks, integrations)
 	triggerWorkflow('/api/workflows/events', {
 		eventId: createdEvent.id,
 		channelId: createdEvent.channelId,
 		organizationId: createdEvent.organizationId,
 		projectId: projectId ?? null,
 		notify: event.notify ?? true,
-		eventType: event.title, // Use title as event type for now
+		eventType: event.title,
 		tags: event.tags || []
 	}).catch((error) => {
-		// Log but don't fail the request - workflow will retry automatically
 		logger.error('Failed to trigger event workflow', error instanceof Error ? error : undefined, {
 			eventId: createdEvent.id,
 			channelId: event.channelId
