@@ -114,6 +114,7 @@ const suggestEmoji = authed
 
 			const { text } = await generateText({
 				model: cachedModel,
+				maxTokens: 256,
 				prompt: `Given the channel name "${input.channelName}", suggest a single appropriate emoji that best represents this channel.
 
 Examples:
