@@ -90,6 +90,14 @@ export const auth = betterAuth({
 			}
 		}
 	},
+	session: {
+		expiresIn: 60 * 60 * 24 * 365, // 1 year — PWA users open the app infrequently
+		updateAge: 60 * 60 * 24, // slide expiry forward when session is older than 1 day
+		cookieCache: {
+			enabled: true,
+			maxAge: 60 * 5 // avoid DB hit on every request; revocation propagates within 5 min
+		}
+	},
 	emailAndPassword: {
 		enabled: true,
 		async sendResetPassword({ user, url }) {

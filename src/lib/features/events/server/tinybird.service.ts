@@ -5,16 +5,8 @@ import type { PaginatedResult, PaginationParams } from '../types';
 import { db, schema } from '$lib/server/db';
 import { eq, inArray } from 'drizzle-orm';
 import { createLogger } from '$lib/server/logger';
-import { withCache, generateCacheKey } from '$lib/server/cache';
 
 const logger = createLogger('tinybird-events');
-
-// Cache TTL configurations (in seconds)
-const CACHE_TTL = {
-	LIST_EVENTS: 60, // 1 minute for paginated lists
-	REALTIME_EVENTS: 3, // 3 seconds for SSE polling
-	EVENT_STATS: 300 // 5 minutes for dashboard stats
-} as const;
 
 // Format a Date object for ClickHouse DateTime/DateTime64
 // Converts ISO format to 'YYYY-MM-DD HH:MM:SS.SSS'
@@ -254,49 +246,37 @@ export async function listEvents(
 		};
 	}
 
-	// Generate cache key
-	const cacheKey = generateCacheKey('events:channel', {
-		channelId,
-		orgId,
-		page,
-		limit
+	const response = await tinybird.queryPipe<TinybirdPaginatedResponse>('get_events_paginated', {
+		channel_id: channelId,
+		organization_id: orgId,
+		limit,
+		offset
 	});
 
-	// Wrap query with cache
-	return withCache(cacheKey, CACHE_TTL.LIST_EVENTS, async () => {
-		// Query the get_events_paginated pipe
-		const response = await tinybird.queryPipe<TinybirdPaginatedResponse>('get_events_paginated', {
-			channel_id: channelId,
-			organization_id: orgId,
-			limit,
-			offset
-		});
+	const items = response.data.map(tinybirdToEvent);
+	const total = response.meta?.total || items.length;
+	const totalPages = Math.ceil(total / limit);
 
-		const items = response.data.map(tinybirdToEvent);
-		const total = response.meta?.total || items.length;
-		const totalPages = Math.ceil(total / limit);
+	logger.info('Events listed from Tinybird', {
+		channelId,
+		organizationId: orgId,
+		page,
+		limit,
+		total,
+		returned: items.length
+	});
 
-		logger.info('Events listed from Tinybird', {
-			channelId,
-			organizationId: orgId,
+	return {
+		items,
+		metadata: {
 			page,
 			limit,
 			total,
-			returned: items.length
-		});
-
-		return {
-			items,
-			metadata: {
-				page,
-				limit,
-				total,
-				totalPages,
-				hasNextPage: page < totalPages,
-				hasPreviousPage: page > 1
-			}
-		};
-	});
+			totalPages,
+			hasNextPage: page < totalPages,
+			hasPreviousPage: page > 1
+		}
+	};
 }
 
 export async function listEventsByOrg(
@@ -315,49 +295,36 @@ export async function listEventsByOrg(
 		};
 	}
 
-	// Generate cache key (include projectId to ensure different cache entries)
-	const cacheKey = generateCacheKey('events:org', {
-		orgId,
-		projectId: projectId || 'all',
-		page,
-		limit
-	});
+	const params: Record<string, string | number> = {
+		organization_id: orgId,
+		limit,
+		offset
+	};
 
-	// Wrap query with cache
-	return withCache(cacheKey, CACHE_TTL.LIST_EVENTS, async () => {
-		// Query the get_events_paginated pipe with optional project filter
-		const params: Record<string, string | number> = {
-			organization_id: orgId,
+	if (projectId) {
+		params.project_id = projectId;
+	}
+
+	const response = await tinybird.queryPipe<TinybirdPaginatedResponse>(
+		'get_events_paginated',
+		params
+	);
+
+	const items = response.data.map(tinybirdToEvent);
+	const total = response.meta?.total || items.length;
+	const totalPages = Math.ceil(total / limit);
+
+	return {
+		items,
+		metadata: {
+			page,
 			limit,
-			offset
-		};
-
-		// Add project_id filter if provided
-		if (projectId) {
-			params.project_id = projectId;
+			total,
+			totalPages,
+			hasNextPage: page < totalPages,
+			hasPreviousPage: page > 1
 		}
-
-		const response = await tinybird.queryPipe<TinybirdPaginatedResponse>(
-			'get_events_paginated',
-			params
-		);
-
-		const items = response.data.map(tinybirdToEvent);
-		const total = response.meta?.total || items.length;
-		const totalPages = Math.ceil(total / limit);
-
-		return {
-			items,
-			metadata: {
-				page,
-				limit,
-				total,
-				totalPages,
-				hasNextPage: page < totalPages,
-				hasPreviousPage: page > 1
-			}
-		};
-	});
+	};
 }
 
 export async function getEventsAfter(
@@ -370,38 +337,24 @@ export async function getEventsAfter(
 		data: Record<string, unknown>[];
 	}
 
-	// Generate cache key with timestamp truncated to 3-second buckets
-	// This ensures all requests within a 3-second window hit the same cache
-	const timestampBucket = Math.floor(afterTimestamp.getTime() / 3000) * 3000;
-	const cacheKey = generateCacheKey('events:realtime', {
-		channelId,
-		orgId,
-		since: timestampBucket,
+	const response = await tinybird.queryPipe<TinybirdStreamResponse>('stream_events', {
+		channel_id: channelId,
+		organization_id: orgId,
+		since: formatDateForTinybird(afterTimestamp),
 		limit
 	});
 
-	// Wrap query with cache
-	return withCache(cacheKey, CACHE_TTL.REALTIME_EVENTS, async () => {
-		// Query the stream_events pipe
-		const response = await tinybird.queryPipe<TinybirdStreamResponse>('stream_events', {
-			channel_id: channelId,
-			organization_id: orgId,
-			since: formatDateForTinybird(afterTimestamp),
-			limit
-		});
+	const events = response.data.map(tinybirdToEvent);
 
-		const events = response.data.map(tinybirdToEvent);
-
-		logger.info('Events streamed from Tinybird', {
-			channelId,
-			organizationId: orgId,
-			since: afterTimestamp.toISOString(),
-			limit,
-			returned: events.length
-		});
-
-		return events;
+	logger.info('Events streamed from Tinybird', {
+		channelId,
+		organizationId: orgId,
+		since: afterTimestamp.toISOString(),
+		limit,
+		returned: events.length
 	});
+
+	return events;
 }
 
 export async function getEventById(eventId: string): Promise<Event | null> {
@@ -447,43 +400,32 @@ export async function getEventStats(
 		}>;
 	}
 
-	// Generate cache key
-	const cacheKey = generateCacheKey('events:stats', {
-		orgId,
-		channelId: channelId || 'all',
-		dateFrom: dateFrom?.getTime() || 'none',
-		dateTo: dateTo?.getTime() || 'none'
+	const params: Record<string, string> = {
+		organization_id: orgId
+	};
+
+	if (channelId) params.channel_id = channelId;
+	if (dateFrom) params.date_from = formatDateForTinybird(dateFrom);
+	if (dateTo) params.date_to = formatDateForTinybird(dateTo);
+
+	const response = await tinybird.queryPipe<TinybirdStatsResponse>('get_events_stats', params);
+
+	const stats = response.data[0] || {
+		total_events: 0,
+		unique_users: 0,
+		tags_distribution: {}
+	};
+
+	logger.info('Event stats fetched from Tinybird', {
+		organizationId: orgId,
+		channelId,
+		dateFrom: dateFrom?.toISOString(),
+		dateTo: dateTo?.toISOString(),
+		totalEvents: stats.total_events,
+		uniqueUsers: stats.unique_users
 	});
 
-	// Wrap query with cache
-	return withCache(cacheKey, CACHE_TTL.EVENT_STATS, async () => {
-		const params: Record<string, string> = {
-			organization_id: orgId
-		};
-
-		if (channelId) params.channel_id = channelId;
-		if (dateFrom) params.date_from = formatDateForTinybird(dateFrom);
-		if (dateTo) params.date_to = formatDateForTinybird(dateTo);
-
-		const response = await tinybird.queryPipe<TinybirdStatsResponse>('get_events_stats', params);
-
-		const stats = response.data[0] || {
-			total_events: 0,
-			unique_users: 0,
-			tags_distribution: {}
-		};
-
-		logger.info('Event stats fetched from Tinybird', {
-			organizationId: orgId,
-			channelId,
-			dateFrom: dateFrom?.toISOString(),
-			dateTo: dateTo?.toISOString(),
-			totalEvents: stats.total_events,
-			uniqueUsers: stats.unique_users
-		});
-
-		return stats;
-	});
+	return stats;
 }
 
 /**
