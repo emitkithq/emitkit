@@ -1,0 +1,18 @@
+{
+  "name": "@emitkit/docs",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "imports": {
+    "#*": "./content/*"
+  },
+  "scripts": {
+    "build": "blume build --strict",
+    "check": "blume check --strict",
+    "dev": "blume dev",
+    "validate": "blume validate --strict"
+  },
+  "dependencies": {
+    "blume": "1.7.3"
+  }
+}

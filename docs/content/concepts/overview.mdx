@@ -1,0 +1,24 @@
+---
+title: Core concepts
+description: Organizations, Projects, Channels, events, and identities.
+sidebar:
+  order: 0
+---
+
+EmitKit records the moments that matter in your product. Its hierarchy is:
+
+```text
+Organization → Project → Channel → Event
+```
+
+- An **Organization** has members (owners, admins, and members), API keys,
+  and the identities of your users.
+- A **Project** represents one product or website.
+- A **Channel** groups related events inside a Project, such as `payments` or
+  `signups`.
+- An **Event** records one occurrence: a title, an optional description, icon,
+  tags, and JSON metadata, and optionally the user it's about.
+
+Events appear live in the dashboard's event console, and can send a
+[push notification](/concepts/notifications) to members who turn notifications
+on.

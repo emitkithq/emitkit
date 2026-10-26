@@ -1,0 +1,36 @@
+# dependencies
+node_modules/
+
+# build output
+dist/
+.blume/
+.wrangler/
+.vite/
+*.tsbuildinfo
+
+# alchemy local state & profiles
+.alchemy/
+
+# environment & secrets (never commit)
+.env
+.env.*
+!.env.example
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
+*.pem
+
+# e2e artifacts that may contain secrets (sanitized reports live in e2e/reports)
+e2e/.auth/
+# e2e reports: only report.md and notes.md are committed; screenshots, traces
+# and HTTP logs stay local
+e2e/reports/**
+!e2e/reports/**/
+!e2e/reports/**/*.md
+test-results/
+playwright-report/
+blob-report/
+
+# os / editor
+.DS_Store
+*.log

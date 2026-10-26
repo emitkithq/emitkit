@@ -1,0 +1,50 @@
+---
+title: MCP server
+description: Give agents EmitKit's API operations as MCP tools.
+sidebar:
+  order: 0
+---
+
+EmitKit's MCP server lives at:
+
+```text
+https://api.emitkit.com/mcp
+```
+
+It speaks stateless Streamable HTTP with JSON responses and offers one tool
+for each API operation:
+
+| Tool | Does | Required arguments |
+| --- | --- | --- |
+| `createEvent` | Sends an event (source defaults to `mcp`); with buttons or fields it [asks for a decision](/concepts/questions) | `channelName`, `title` |
+| `getEvent` | Reads an event and its answer | `id` |
+| `listEvents` | Lists recent events, newest first (filter by `channel`, `since`, `before`) | none |
+| `listChannels` | Lists the Project's channels | none |
+| `cancelEvent` | Stops an event from waiting for an answer | `id` |
+| `identifyUser` | Creates or updates an identity | `userId` |
+| `deleteIdentity` | Erases an identity | `user_id` |
+
+Tool calls run the same code as the REST API: the same validation, rate limit,
+idempotency (`idempotencyKey` on `createEvent`), and Organization and Project
+scope. The result carries the API's JSON response. A
+[read-only key](/api/api-keys) only sees `getEvent`, `listEvents` and
+`listChannels`. A missing, invalid or rate-limited key gets an HTTP `401` or
+`429` for every request, before any tool runs.
+
+The server authenticates with an [API key](/api/api-keys) sent in a request
+header. It supports MCP protocol versions `2025-11-25`, `2025-06-18`,
+`2025-03-26`, and `2024-11-05`.
+
+<CardGroup cols={2}>
+  <Card title="Connect a client" href="/mcp/clients" icon="plug">
+    Claude Code and other clients that send a fixed header.
+  </Card>
+  <Card title="Authenticate with an API key" href="/mcp/api-key" icon="key">
+    Which headers to send, and how to keep the key safe.
+  </Card>
+</CardGroup>
+
+:::warning
+Never add a key to the MCP URL. EmitKit only reads credentials from headers,
+and URLs end up in logs and browser history.
+:::

@@ -1,0 +1,58 @@
+---
+title: Getting started
+description: Sign up, send your first event, and get it on your phone.
+sidebar:
+  icon: rocket
+  order: 1
+---
+
+<Steps>
+  <Step title="Create an account">
+    Open the dashboard and sign up with your email and a password, or ask for
+    a sign-in code by email (it expires after 5 minutes). Verify your email
+    address from the message EmitKit sends: invitations to other
+    Organizations can only be accepted from a verified address. Signing in
+    with a code verifies it for you.
+  </Step>
+  <Step title="Start your trial">
+    On emitkit.com, pick a plan and start the 14-day free trial (a card is
+    required; nothing is charged until the trial ends, and you can cancel
+    anytime). Self-hosted EmitKit skips this step.
+  </Step>
+  <Step title="Land in your workspace">
+    EmitKit creates an Organization named after you, a Project called
+    **My app** and a starter API key bound to it, then opens your dashboard
+    with the **setup guide**. Rename anything later in **Settings**. Channels
+    are created by the first event that names them.
+  </Step>
+  <Step title="Send the first event">
+    In the guide, **Reveal** the starter key: it fills into the curl command
+    and the [TypeScript SDK](/sdk) snippet. Run one of them, or
+    press **Send a test event**. The guide watches for your first event and
+    celebrates when it lands. Store the key in a secret manager; owners and
+    admins can reveal it again in **Settings → API keys**.
+  </Step>
+  <Step title="Get it on your phone">
+    **Set up your phone** shows a QR code that opens EmitKit on your phone,
+    and the steps to install it (on iPhone, Share → **Add to Home Screen**)
+    and turn on notifications. Push is set up per device for all your
+    Organizations; choose which ones and which channels in **Settings →
+    Notifications**. The setup guide and the phone setup stay in the account
+    menu.
+  </Step>
+</Steps>
+
+<CardGroup cols={2}>
+  <Card title="Manage API keys" href="/api/api-keys" icon="key">
+    Create, rotate, and revoke Project-bound keys.
+  </Card>
+  <Card title="Use TypeScript" href="/sdk" icon="code">
+    Install `@emitkit/js` and send events from a server.
+  </Card>
+</CardGroup>
+
+:::warning
+API keys are secrets. Keep them in a secret manager or a secure credential
+store. Never put a key in a URL, commit it to source control, or paste it into
+logs and support messages.
+:::

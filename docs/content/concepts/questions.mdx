@@ -1,0 +1,283 @@
+---
+title: Ask for a decision
+description: Send an event with buttons and fields, and get the answer back when someone taps it on their phone.
+sidebar:
+  order: 2
+---
+
+An event can ask something. Add **buttons** (`actions` with an `id`) and, if
+you need more than a yes or no, **fields**. The event then waits for an answer:
+members who turned on notifications for its Channel get a push that opens the
+answer page, the first person to answer decides, and you read the answer back.
+
+It's made for agents and automations that need a human in the loop: approve a
+refund, ship a deploy, pick a headline, reply to a customer.
+
+## Ask
+
+```bash
+curl https://api.emitkit.com/v1/events \
+  -H "Authorization: Bearer $EMITKIT_API_KEY" \
+  -H "Idempotency-Key: refund-1042" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "channelName": "refunds",
+    "title": "Refund Jane Cooper for order #1042?",
+    "description": "Arrived damaged: 2 of 3 items broken.",
+    "fields": [
+      {
+        "id": "resolution",
+        "type": "choice",
+        "label": "Resolution",
+        "options": [
+          { "id": "full", "label": "Full refund ($240)" },
+          { "id": "partial", "label": "Broken items only ($160)" }
+        ],
+        "default": "partial"
+      },
+      { "id": "note", "type": "text", "label": "Note to Jane", "multiline": true }
+    ],
+    "actions": [
+      { "id": "approve", "label": "Refund", "style": "primary" },
+      { "id": "deny", "label": "Don'\''t refund", "style": "destructive", "requires": ["note"] },
+      { "label": "Open order", "url": "https://shop.example.com/admin/orders/1042" }
+    ],
+    "expiresIn": 1800
+  }'
+```
+
+The response is the usual `201` with the event, including its `fields`,
+`actions` and `answer` (shortened here):
+
+```json
+{
+  "success": true,
+  "requestId": "5f0c6b1e-…",
+  "data": {
+    "id": "event_…",
+    "title": "Refund Jane Cooper for order #1042?",
+    "fields": [ … ],
+    "actions": [ … ],
+    "answer": {
+      "status": "pending",
+      "expiresAt": "2026-09-26T10:30:00.000Z",
+      "url": "https://app.emitkit.com/a/event_…",
+      "action": null,
+      "values": null,
+      "by": null,
+      "at": null
+    }
+  }
+}
+```
+
+`data.answer.url` is the answer page. Pushes for this event open it, the
+dashboard feed marks the event "Waiting for an answer" with an **Answer**
+button, and you can share the link with anyone in your Organization. For an
+event that doesn't ask anything, `answer` is `null`.
+
+Send an `Idempotency-Key`: if your request is retried, you get the same event
+back instead of asking twice. A replay returns the event as it was created
+(`pending`); read the current answer with `GET`.
+
+## Buttons, links and fields
+
+**Actions** (up to 4) are either:
+
+- a **button**, `{ "id", "label", "style"?, "requires"? }`: pressing it is the
+  answer. `id` is what you get back (`submit` is taken, see below). `style` is
+  `primary`, `destructive`, or left out. `requires` lists text or
+  multiple-choice fields that must be filled in first, so "Don't refund" can
+  insist on a reason. (Other fields always have a value, so they can't be
+  required.)
+- a **link**, `{ "label", "url" }`: opens a page (https). It never answers. Links
+  show on the answer page and in the event's details in the dashboard feed, on
+  any event.
+
+**Fields** (up to 5) describe data, not controls. The answer page picks the
+control:
+
+| `type` | Settings | Answer value |
+| --- | --- | --- |
+| `choice` | `options` (2–10 `{ id, label }`), `multiple`, `default` | an option id; an array of ids with `multiple` |
+| `text` | `multiline`, `maxLength` (≤ 2,000), `placeholder`, `default` | a string (left out when empty) |
+| `number` | `min`, `max`, `step`, `unit` (like `$` or `%`), `default` | a number |
+| `boolean` | `default` | `true` or `false` |
+
+An event **waits for an answer** when it has a button or a field. Fields
+without buttons get a **Send** button, whose answer is `"submit"`. An event
+with only links is an ordinary event with links.
+
+Fields, options and actions only take the settings above: anything else (such
+as `"required": true`) is rejected with a message saying what to use instead.
+
+A single choice always has a value: its `default`, or the first option. An
+event with one single choice and no buttons is answered with one tap.
+
+## Get the answer
+
+Two ways, both always available: EmitKit calls you back, or you poll.
+
+### Callbacks
+
+Add `callbackUrl` (https) and EmitKit `POST`s there once the question is
+answered, or when it expires unanswered. Add `resume` (up to 65,536
+characters of your own state, such as a job id) and it comes back as is, so a
+serverless handler can carry on without a database:
+
+```json
+{
+  "channelName": "refunds",
+  "title": "Refund Jane Cooper for order #1042?",
+  "actions": [{ "id": "approve", "label": "Refund" }, { "id": "deny", "label": "Don't refund" }],
+  "callbackUrl": "https://shop.example.com/api/emitkit",
+  "resume": "refund-job-1042"
+}
+```
+
+The callback:
+
+```http
+POST /api/emitkit
+content-type: application/json
+webhook-id: msg_event_…_answered
+webhook-timestamp: 1790330640
+webhook-signature: v1,…
+
+{
+  "type": "event.answered",
+  "eventId": "event_…",
+  "answer": { "status": "answered", "action": "approve", "values": {}, "by": { … }, "at": "…", "expiresAt": "…", "url": "…" },
+  "resume": "refund-job-1042"
+}
+```
+
+`type` is `event.answered` or `event.expired` (then `answer.action` is
+`null`). Nothing is sent when you cancel.
+
+It's signed the [Standard Webhooks](https://www.standardwebhooks.com/) way
+(what Svix uses), with your project's **callback signing secret**: owners and
+admins find it in **Settings → API keys**. Verify with any Standard Webhooks
+library before you act on it:
+
+```ts
+import { Webhook } from "standardwebhooks";
+
+// whsec_… (an empty secret throws, so a missing variable fails at startup)
+const webhook = new Webhook(process.env.EMITKIT_CALLBACK_SECRET ?? "");
+
+export const POST = async (request: Request) => {
+  const body = await request.text();
+  const callback = webhook.verify(body, Object.fromEntries(request.headers));
+  // callback.type, callback.answer.action, callback.resume …
+  return new Response(null, { status: 204 });
+};
+```
+
+Answer with any 2xx. Anything else, or no answer within 10 seconds, is
+retried with backoff for about 16 hours (10 attempts), with the same
+`webhook-id` every time, so you can drop repeats. Redirects aren't followed.
+`GET /v1/events/{id}` shows how delivery went in `callback`:
+`{ url, attempts, lastStatus, deliveredAt }`.
+
+Delivery is at least once: the same `webhook-id` can arrive twice, even after
+you answered 2xx. For a decision that moves money, you can also read the answer
+back with `GET /v1/events/{id}` before you act; it needs your API key, which a
+leaked signing secret doesn't give anyone.
+
+### Polling
+
+Poll the event until `data.answer.status` is no longer `pending`. Every few
+seconds is fine: the rate limit is 100 requests per minute per API key.
+
+```bash
+curl https://api.emitkit.com/v1/events/event_… \
+  -H "Authorization: Bearer $EMITKIT_API_KEY"
+```
+
+```json
+{
+  "success": true,
+  "requestId": "…",
+  "data": {
+    "id": "event_…",
+    "answer": {
+      "status": "answered",
+      "action": "approve",
+      "values": { "resolution": "partial" },
+      "by": { "id": "…", "name": "Chris", "email": "chris@example.com" },
+      "at": "2026-09-26T10:04:12.000Z",
+      "expiresAt": "2026-09-26T10:30:00.000Z",
+      "url": "https://app.emitkit.com/a/event_…"
+    }
+  }
+}
+```
+
+`values` has every field: untouched ones at their starting value (a single
+choice's first option or `default`, a number's `default` or `min`, `false`),
+and text only when filled in.
+
+| `status` | Means |
+| --- | --- |
+| `pending` | Waiting. |
+| `answered` | Someone pressed a button. `action` is its id, `values` the fields by id, `by` who. |
+| `expired` | `expiresIn` seconds passed without an answer (10 to 604800; default 86400, 24 hours). |
+| `canceled` | You canceled it. |
+
+The first answer wins. Anyone who opens the page later sees who answered and
+what they chose. The answer is also recorded in the Channel as an event ("Chris
+chose “Refund”"), so it shows up in your feed.
+
+Treat anything but the answer you're waiting for as "no": an expired question
+wasn't approved.
+
+## Cancel
+
+When you no longer need the answer (the refund was handled another way, a newer
+deploy replaced this one), cancel it:
+
+```bash
+curl -X POST https://api.emitkit.com/v1/events/event_…/cancel \
+  -H "Authorization: Bearer $EMITKIT_API_KEY"
+```
+
+The answer page then says it's no longer needed. Canceling twice is fine: you
+get the canceled event back. Once it was answered or expired you get `409`
+with `code: "not_pending"` and a message saying who answered it, or that it
+expired; an event that never asked anything gets `409` with `code:
+"not_waiting"`.
+
+## Mistakes
+
+A question that doesn't add up is rejected with `400`, `code:
+"validation_error"`, and a `details` entry per problem with its `path` and how
+to fix it:
+
+```json
+{
+  "success": false,
+  "code": "validation_error",
+  "error": "Validation error",
+  "details": [
+    {
+      "code": "invalid",
+      "path": ["actions", 1, "requires", 0],
+      "message": "\"reason\" is not a field; field ids are resolution, note"
+    }
+  ],
+  "requestId": "…"
+}
+```
+
+Besides the shapes above: `callbackUrl` and `resume` only go on an event that
+waits, and `callbackUrl` can't point at EmitKit itself. Field and button ids are unique, `submit` isn't a
+button id, `requires` names text or multiple-choice fields, a choice's
+`default` names its options, `expiresIn` only goes on an event that waits, and
+an event that waits always notifies (`notify: false` is rejected).
+
+## From an agent
+
+The [MCP server](/mcp) has the same operations as tools: `createEvent` takes
+`fields`, `actions` and `expiresIn`, `getEvent` reads the answer, and
+`cancelEvent` cancels.

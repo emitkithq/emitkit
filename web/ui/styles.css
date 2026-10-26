@@ -1,0 +1,386 @@
+@import "tailwindcss";
+@import "@heroui/styles";
+@import "@better-auth-ui/heroui/styles";
+
+/*
+ * Tailwind scans the Vite root (`web/`) automatically; list the frontends
+ * explicitly so a change of root never drops their classes. Better Auth UI
+ * registers its own `@source` from the import above.
+ */
+@source "../app";
+@source "../www";
+@source "../ui";
+
+/*
+ * HeroUI's default theme ships borderless fields (--field-border-width: 0px),
+ * so field shells render as bare text against the page. Restore the 1px
+ * border so they sit like the neighbouring bordered cards.
+ */
+:root,
+.light,
+.default,
+[data-theme="light"],
+[data-theme="default"],
+.dark,
+[data-theme="dark"] {
+  --field-border-width: 1px;
+  --field-border: var(--border);
+}
+
+/*
+ * Geist and Geist Mono, self-hosted (variable, weights 100–900) as the brand
+ * kit specifies. Licensed under the SIL OFL (fonts/OFL.txt).
+ */
+@font-face {
+  font-family: Geist;
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("./fonts/Geist.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Geist Mono";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("./fonts/GeistMono.woff2") format("woff2");
+}
+
+/*
+ * The brand kit palette (kit README, "Colour"). Every surface colour below is
+ * one of these; components never spell a hex value.
+ *
+ *   Ink        #0B0B0C  text only, never artwork
+ *   Paper      #FFFFFF  surfaces, white artwork
+ *   Emit Blue  #0A31F5  the accent, mark, wordmark and icon tile
+ *   Midnight   #050606  dark fields; the wordmark on white
+ *   Deep Blue  #0721B8  pressed and hover states of Emit Blue
+ *   Signal     #9FBEFF  highlights on dark
+ *   Mist       #F4F4F2  page background
+ *   Graphite   #5E5E66  secondary text
+ */
+:root {
+  --brand-ink: #0b0b0c;
+  --brand-paper: #fff;
+  --brand-emit-blue: #0a31f5;
+  --brand-midnight: #050606;
+  --brand-deep-blue: #0721b8;
+  --brand-signal: #9fbeff;
+  --brand-mist: #f4f4f2;
+  --brand-graphite: #5e5e66;
+}
+
+/*
+ * HeroUI's tokens, mapped onto the palette. HeroUI derives soft, hover and
+ * focus shades from these, so buttons, chips, fields, charts and focus rings
+ * all follow. The kit's rule lines are a warm grey (#E4E4E0), and the
+ * neutrals in between are tinted from Mist rather than HeroUI's cool greys.
+ */
+:root,
+.light,
+.default,
+[data-theme="light"],
+[data-theme="default"] {
+  --accent: var(--brand-emit-blue);
+  --accent-foreground: var(--brand-paper);
+  --accent-hover: var(--brand-deep-blue);
+
+  --background: var(--brand-mist);
+  --foreground: var(--brand-ink);
+  --muted: var(--brand-graphite);
+
+  --surface: var(--brand-paper);
+  --surface-secondary: #f0f0ed;
+  --surface-tertiary: #e9e9e5;
+  --overlay: var(--brand-paper);
+  --default: #ebebe7;
+  --default-foreground: var(--brand-ink);
+  --segment: var(--brand-paper);
+  --segment-foreground: var(--brand-ink);
+
+  --field-background: var(--brand-paper);
+  --field-foreground: var(--brand-ink);
+
+  --border: #e4e4e0;
+  --separator: #ebebe7;
+
+  /* Brand artwork and charts that follow the theme (kit rule 3). */
+  --artwork-mark: var(--brand-emit-blue);
+  --artwork-wordmark: var(--brand-midnight);
+  --chart-events: var(--brand-emit-blue);
+}
+
+/*
+ * Dark is Midnight with Paper text. Emit Blue stays the accent (its white
+ * label keeps contrast); Signal carries highlights and focus, as the kit
+ * specifies for dark surfaces. Scope a subtree with `class="dark"` to set a
+ * Midnight section on a light page.
+ */
+.dark,
+[data-theme="dark"] {
+  --accent: var(--brand-emit-blue);
+  --accent-foreground: var(--brand-paper);
+  --accent-hover: var(--brand-deep-blue);
+  --accent-soft-foreground: var(--brand-signal);
+  --focus: var(--brand-signal);
+
+  --background: var(--brand-midnight);
+  --foreground: var(--brand-paper);
+  --muted: #9a9aa2;
+
+  --surface: #111213;
+  --surface-secondary: #18191b;
+  --surface-tertiary: #1f2022;
+  --overlay: #141516;
+  --default: #1c1d1f;
+  --default-foreground: var(--brand-paper);
+  --segment: #2a2b2e;
+  --segment-foreground: var(--brand-paper);
+
+  --field-background: #111213;
+  --field-foreground: var(--brand-paper);
+
+  --border: #232427;
+  --separator: #1c1d20;
+
+  --artwork-mark: var(--brand-paper);
+  --artwork-wordmark: var(--brand-paper);
+  --chart-events: var(--brand-signal);
+}
+
+:root,
+.light,
+.default,
+[data-theme="light"],
+[data-theme="default"],
+.dark,
+[data-theme="dark"] {
+  --font-sans:
+    Geist, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+  --font-mono:
+    "Geist Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    monospace;
+}
+
+/* The signature Project/Member orb hues — product identity, not chrome. */
+:root,
+.light,
+.default,
+[data-theme="light"],
+[data-theme="default"] {
+  --orb-amber: oklch(76% 0.14 68);
+  --orb-teal: oklch(70% 0.1 195);
+  --orb-violet: oklch(66% 0.13 300);
+  --orb-coral: oklch(72% 0.15 25);
+  --orb-green: oklch(72% 0.13 150);
+}
+
+.dark,
+[data-theme="dark"] {
+  --orb-amber: oklch(70% 0.13 68);
+  --orb-teal: oklch(64% 0.09 195);
+  --orb-violet: oklch(60% 0.12 300);
+  --orb-coral: oklch(66% 0.14 25);
+  --orb-green: oklch(66% 0.12 150);
+}
+
+@theme inline {
+  /* The signature Project/Member hues. Exposed to Tailwind so consumers write
+     `text-orb-coral` / `border-orb-coral/50` instead of hand-spelling
+     `text-[var(--orb-coral)]` and `color-mix(...)` opacity by hand. */
+  --color-orb-amber: var(--orb-amber);
+  --color-orb-teal: var(--orb-teal);
+  --color-orb-violet: var(--orb-violet);
+  --color-orb-coral: var(--orb-coral);
+  --color-orb-green: var(--orb-green);
+  /* HeroUI's absolute light/dark endpoints, for the few places that need a
+     fixed pole rather than a theme-relative colour (orb glyphs, scrims). */
+  --color-snow: var(--snow);
+  --color-eclipse: var(--eclipse);
+  /* The brand palette as fixed colours (`bg-emit-blue`, `text-signal`), for
+     brand fields that must not follow the theme: a blue band stays blue. */
+  --color-ink: var(--brand-ink);
+  --color-paper: var(--brand-paper);
+  --color-emit-blue: var(--brand-emit-blue);
+  --color-midnight: var(--brand-midnight);
+  --color-deep-blue: var(--brand-deep-blue);
+  --color-signal: var(--brand-signal);
+  --color-mist: var(--brand-mist);
+  --color-graphite: var(--brand-graphite);
+}
+
+@theme {
+  /*
+   * Semantic type scale. The dashboard was hand-spelling ~16 distinct
+   * `text-[NNpx]` sizes (13px vs 13.5px, 12px vs 12.5px used for the same
+   * role) across 34 files. These six named steps map onto the values that
+   * were actually in use and collapse the near-duplicate pairs, so a role —
+   * not a pixel literal — drives the size. Prefer `text-body` over
+   * `text-[13.5px]`.
+   *
+   *   caption  eyebrows, badges, keyboard hints        (was 11 / 10.5)
+   *   meta     timestamps, secondary metadata          (was 12 / 12.5)
+   *   body     default body / list rows                (was 13 / 13.5 — dominant)
+   *   label    inputs, buttons, emphasised body        (was 14 / 14.5)
+   *   title    card + panel titles                     (was 15 / 15.5 / 16)
+   *   h2       page-header titles                      (was 20 / 21)
+   */
+  --text-caption: 11px;
+  --text-caption--line-height: 1.35;
+  --text-meta: 12px;
+  --text-meta--line-height: 1.4;
+  --text-body: 13.5px;
+  --text-body--line-height: 1.5;
+  --text-label: 14px;
+  --text-label--line-height: 1.45;
+  --text-title: 15.5px;
+  --text-title--line-height: 1.4;
+  --text-h2: 20px;
+  --text-h2--line-height: 1.3;
+
+  /* The dashboard's one column width: the top bar, page headers, the feed,
+     projects and channels all use it, so moving between pages never
+     shifts the layout (`max-w-page`). */
+  --container-page: 560px;
+
+  /* One tracking value for the uppercase eyebrow/label pattern, replacing the
+     hand-spelled 0.06em / 0.07em / 0.08em drift (27+ sites). */
+  --tracking-label: 0.08em;
+
+  /*
+   * The brand kit's type roles ("Typography"), for marketing and other
+   * brand-led surfaces. Geist 600 for display and headings, Geist 400 at
+   * 1.55 for running text, Geist Mono for code, labels and captions.
+   *
+   *   display  Geist 600 · 72 / 1.0 · -0.04em   (fluid down to 44)
+   *   heading  Geist 600 · 32 / 1.2 · -0.02em   (fluid down to 28)
+   *   lead     Geist 400 · 19 / 1.55            intro paragraphs
+   *   copy     Geist 400 · 17 / 1.55            body copy
+   */
+  --text-display: clamp(2.75rem, 1.6rem + 4.6vw, 4.5rem);
+  --text-display--line-height: 1;
+  --text-display--letter-spacing: -0.04em;
+  --text-heading: clamp(1.75rem, 1.45rem + 1.2vw, 2rem);
+  --text-heading--line-height: 1.2;
+  --text-heading--letter-spacing: -0.02em;
+  --text-lead: 19px;
+  --text-lead--line-height: 1.55;
+  --text-copy: 17px;
+  --text-copy--line-height: 1.55;
+
+  --tracking-display: -0.04em;
+  --tracking-heading: -0.02em;
+  --leading-copy: 1.55;
+
+  /* Soft, long shadows for things floating over brand fields and photos:
+     notifications (`float`), app windows (`window`), panels on Midnight
+     (`glow`, tinted Emit Blue). */
+  --shadow-float: 0 24px 48px -24px
+    color-mix(in oklab, var(--brand-midnight) 45%, transparent);
+  --shadow-window: 0 40px 80px -32px
+    color-mix(in oklab, var(--brand-midnight) 50%, transparent);
+  --shadow-glow: 0 40px 80px -40px
+    color-mix(in oklab, var(--brand-emit-blue) 35%, transparent);
+}
+
+/*
+ * Settings: Better Auth UI renders its cards (password, sessions, the danger
+ * zone) as HeroUI Cards with a shadow. Give them the flat 1px border of the
+ * dashboard's own settings cards, so the modal has one card style.
+ */
+[data-settings-content] .card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-2xl);
+  box-shadow: none;
+}
+
+/* The app's own transitions. HeroUI and HeroUI Pro ship reduced-motion handling
+   for their components, but nothing covers what the dashboard hand-rolls. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+:root {
+  font-family: var(--font-sans);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  min-width: 20rem;
+  margin: 0;
+  background-color: var(--background);
+}
+
+/*
+ * The "receiving events right now" indicator: a dot with one expanding ring.
+ * A stylesheet rule rather than a component's utilities because a keyframed
+ * pseudo-element has no Tailwind spelling.
+ */
+.live-dot {
+  position: relative;
+  display: inline-block;
+  width: 0.375rem;
+  height: 0.375rem;
+  background: var(--accent);
+  border-radius: 9999px;
+}
+
+.live-dot::after {
+  position: absolute;
+  inset: -3px;
+  content: "";
+  background: color-mix(in oklab, var(--accent) 35%, transparent);
+  border-radius: 9999px;
+  animation: live-pulse 2.2s ease-out infinite;
+}
+
+@keyframes live-pulse {
+  0% {
+    transform: scale(0.55);
+    opacity: 0.9;
+  }
+
+  70%,
+  100% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+
+/* An Event that arrived while the reader was watching, fading out of accent. */
+.event-flash {
+  border-radius: var(--radius);
+  animation: event-flash 3.2s ease-out both;
+}
+
+@keyframes event-flash {
+  from {
+    background-color: color-mix(in oklab, var(--accent) 8%, transparent);
+  }
+
+  to {
+    background-color: transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .live-dot::after {
+    opacity: 0;
+  }
+}

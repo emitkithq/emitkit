@@ -1,0 +1,11 @@
+# Notes: reads, scopes and read-only keys (local)
+
+Run against `pnpm dev` (PORT=5391). Scenarios: `01-routing`, `02-public-api`, `04-dashboard`, `10-projects`, `11-channels`, `13-signed-in`, `19-actions`, `20-reads`. 72 passed, 5 skipped (paywall-only and remote-only cases). Run after the review fixes.
+
+- `20-reads` covers `GET /v1/me`, `GET /v1/events` (order, `before` paging with `nextCursor`, `channel` and `since` filters, a named 400 for each bad filter, other projects and organizations kept out), `GET /v1/channels`, and read-only keys: 403 `forbidden` naming the missing scope for createEvent, identify and deleteIdentity; MCP lists only `getEvent`, `listEvents`, `listChannels` and refuses `createEvent` as an unknown tool; rotation keeps the key read-only.
+- MCP now authenticates every request before its method: a bad key gets HTTP 401 for `initialize`, `tools/list` and `tools/call` (before, a tool call answered 200 with the 401 inside the result). Notifications (no `id`) still get 202 without a key check.
+- The MCP `listEvents` input schema is compared with the OpenAPI query parameters (names, schemas, descriptions), like `createEvent`'s with `CreateEventRequest` in `19-actions`.
+- In the dashboard, a read-only key is created from Settings → API keys and shows a "Read-only" badge (`screenshots/20-reads-the-dashboard-*`). The new key's secret is dismissed before the screenshot; the rows show only the visible prefix.
+- Review fixes covered by `20-reads`: walking the list one event per page gives the whole list in order (the cursor is time plus id); `since` is inclusive; `channel=Orders` finds `orders`; unknown parameters (`cursor`, `channelId`) and times without a zone or with a lowercase `z` are refused by name; a first page stays full when the newest events are in a deleted channel; a read-only key calling `createEvent` over MCP gets the REST 403 naming `events:write`.
+- Not automated: events sharing a millisecond (the order and cursor handle them; making two land in one millisecond isn't reliable from a test), and a key whose metadata can't be decoded (it now gets no project and no scopes: everything is refused with 403).
+- Secrets: checked the traces for unredacted `emitkit_` keys and `whsec_` secrets and for screencast frames: none.

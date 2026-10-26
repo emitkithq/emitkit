@@ -1,0 +1,21 @@
+---
+title: Notifications that don't stop quietly
+description: The app now notices when push stops working on a device, repairs what it can, and tells you about the rest. Signing out stops a device's pushes.
+type: changelog
+date: 2026-09-28
+changelog:
+  category: Dashboard
+---
+
+- **Repaired when the app opens.** Browsers sometimes replace a device's push
+  registration. When you open the app, EmitKit moves your notification
+  settings to the new one, with your per-organization and channel choices
+  kept. If the browser dropped it altogether, EmitKit registers again
+  without asking.
+- **"Notifications stopped on this device".** If push was on and nothing
+  reaches the device any more, the app says so. **Turn back on** registers
+  it afresh. If notifications are blocked in the browser or phone settings,
+  the app says that instead.
+- **Signing out stops pushes.** A device you sign out of no longer gets your
+  account's notifications, so the next person using it doesn't see them.
+  Turn notifications on again after you sign back in.

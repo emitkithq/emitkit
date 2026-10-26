@@ -1,0 +1,19 @@
+---
+title: Callbacks for questions
+description: Get the answer to a question POSTed to your own endpoint, signed, with your state echoed back, so serverless code doesn't have to wait.
+type: changelog
+date: 2026-09-26
+changelog:
+  category: API
+---
+
+- **`callbackUrl`.** Send it with a question and EmitKit POSTs the answer
+  (`event.answered`), or the expiry (`event.expired`), to your endpoint,
+  signed the Standard Webhooks way with your project's callback secret
+  (Settings → API keys). Failed deliveries are retried for about 16 hours
+  with the same `webhook-id`. See [Callbacks](/concepts/questions#callbacks).
+- **`resume`.** Up to 65,536 characters of your own state, sent back as is in
+  the callback and `GET /v1/events/{id}`, so a serverless handler can carry on
+  without a database.
+- **Delivery status.** `GET /v1/events/{id}` shows `callback`: attempts, the
+  last status and when it was delivered.

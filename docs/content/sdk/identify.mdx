@@ -1,0 +1,31 @@
+---
+title: User identification
+description: Create Organization-scoped identities and aliases.
+sidebar:
+  order: 3
+---
+
+Identities belong to the Organization, not to a single Project. Use your own
+stable user id and optional aliases:
+
+```typescript
+await emitkit.identify({
+  userId: "user_123",
+  properties: { email: "john@example.com", plan: "pro" },
+  aliases: ["john@example.com"],
+});
+```
+
+Identifying the same `userId` again merges the new `properties` into the
+stored ones: new values replace old ones, and keys you leave out are kept. An
+alias moves to the identity that claimed it most recently. The result lists
+the aliases this call newly claimed.
+
+An event can use the canonical id or an alias in `userId`. To honour an
+erasure request:
+
+```typescript
+await emitkit.identities.delete("user_123"); // properties and aliases are gone
+```
+
+See [Erasing a user](/api#erasing-a-user) for what happens to past events.

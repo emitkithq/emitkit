@@ -1,0 +1,50 @@
+---
+title: Retries and rate limits
+description: Idempotency keys, automatic retries, rate limits, and client options.
+sidebar:
+  order: 5
+---
+
+## Idempotency
+
+`events.create` always sends an `Idempotency-Key`: one it makes up per call,
+so the SDK's own retries never create a second event. Pass yours to make your
+retries safe too, for one real-world occurrence:
+
+```typescript
+await emitkit.events.create(
+  { channelName: "deployments", title: "Production deployed" },
+  { idempotencyKey: "deploy-01JABC" },
+);
+
+emitkit.lastResponse?.replayed; // true when this was the first request's result
+```
+
+The same key and body replay the original response for 24 hours; the same key
+with another body is an `idempotency_conflict`. Keys are scoped to the API
+key.
+
+## Retries
+
+Requests that are safe to repeat (reads, creates with their idempotency key,
+identify, cancel) are retried twice after a network error, a timeout, a 5xx,
+or a `429` whose `Retry-After` is 10 seconds or less. Longer rate-limit waits
+come back to you as `rate_limited` with `retryAfter`.
+
+## Rate limits
+
+Each API key can make 100 requests in a 60-second window.
+`emitkit.lastResponse.rateLimit` holds the last response's `limit`,
+`remaining` and `reset` (Unix seconds).
+
+## Options
+
+```typescript
+const emitkit = new EmitKit({
+  apiKey: "emitkit_…", // default: EMITKIT_API_KEY
+  baseUrl: "https://emitkit.example.com", // a self-hosted EmitKit; default: EMITKIT_BASE_URL
+  timeout: 30_000, // per request, ms
+  maxRetries: 2,
+  fetch, // your own fetch
+});
+```

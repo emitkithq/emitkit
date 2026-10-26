@@ -1,0 +1,41 @@
+---
+title: Events and Channels
+description: How events are organized into Channels within a Project, and how long they're kept.
+sidebar:
+  order: 1
+---
+
+An event records something that happened in your application. Every event
+belongs to a Project and a Channel: the API key supplies the Project, and
+`channelName` supplies the Channel.
+
+Channel names are normalized: lowercased, with spaces and underscores turned
+into hyphens and other punctuation removed, up to 100 characters. A Channel is
+created by the first event that names it and takes that event's icon and
+description. Sending an event to the name of a deleted Channel brings the
+Channel back.
+
+A stored event is limited to 16 KB across its fields, including metadata.
+Events are kept for 90 days.
+
+## Metadata
+
+`metadata` takes any JSON object. The dashboard shows it when you open an
+event, formatting values by their shape and name:
+
+| You send | The dashboard shows |
+| --- | --- |
+| `"amount": 49, "currency": "EUR"` at the top level | The event's value, **€49**, on the event and in Revenue |
+| `{ "amount": 19, "currency": "EUR" }` nested under a key | **€19** as a detail, not counted as revenue |
+| A key ending in `Ms`, such as `"durationMs": 1500` | A duration, **2s** |
+| A key ending in `Bytes` | A size, such as **4.2 GB** |
+| A key ending in `Rate`, with a value from 0 to 1 | A percentage |
+| A key ending in `At`, with an ISO 8601 timestamp | A date and time |
+| `"rating"` from 1 to 5 | Stars |
+| A URL starting with `http://` or `https://` | A link |
+| `true` / `false`, lists, nested objects | Yes/No, chips, an indented group |
+
+For an event's value, `amount` must be a JSON number in major units (`49.5`
+is €49.50; use a negative amount for a refund) and `currency` a three-letter
+ISO 4217 code in any case. Revenue in the dashboard adds up the currency your
+events use most; amounts in other currencies still show on their events.

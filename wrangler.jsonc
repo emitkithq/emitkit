@@ -1,0 +1,50 @@
+// Local development bindings for @cloudflare/vite-plugin (`pnpm dev`).
+// Production resources, domains and secrets come from alchemy.run.ts; keep
+// the binding names here in sync with it. Local secrets live in .dev.vars.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "emitkit",
+  "main": "src/worker/index.ts",
+  "compatibility_date": "2026-09-20",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": {
+    "binding": "ASSETS",
+    "html_handling": "none",
+    "not_found_handling": "none",
+    "run_worker_first": ["/*", "!/assets/*"],
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "emitkit",
+      "database_id": "local-emitkit",
+      "migrations_dir": "migrations",
+    },
+  ],
+  "analytics_engine_datasets": [
+    { "binding": "EVENTS_DATASET", "dataset": "emitkit_events" },
+  ],
+  "queues": {
+    "producers": [{ "binding": "EVENTS_QUEUE", "queue": "emitkit-events" }],
+    "consumers": [
+      {
+        "queue": "emitkit-events",
+        "max_batch_size": 25,
+        "max_batch_timeout": 1,
+        "max_retries": 3,
+      },
+    ],
+  },
+  "send_email": [{ "name": "EMAIL" }],
+  "triggers": { "crons": ["23 * * * *"] },
+  "vars": {
+    "ALLOW_SIGNUP": "true",
+    "API_URL": "http://api.localhost:5173",
+    "APP_URL": "http://app.localhost:5173",
+    "EMAIL_FROM": "noreply@mail.emitkit.com",
+    "EVENT_STORE": "d1",
+    "SITE_URL": "http://localhost:5173",
+    "VAPID_PUBLIC_KEY": "BJFBXyBTBTHdz_z-bzG62kyhxUqKfFetxnpUfgwl8L8pC-XdBalStXKqJ1RIY9AcU1RQpuWZf6_MNaWxxaBRmWc",
+    "VAPID_SUBJECT": "mailto:hi@emitkit.com",
+  },
+}

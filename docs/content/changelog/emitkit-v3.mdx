@@ -1,0 +1,31 @@
+---
+title: EmitKit v3
+description: A new dashboard, push notifications to your devices, identity erasure, an MCP server, and these docs.
+type: changelog
+date: 2026-09-24
+changelog:
+  category: Platform
+---
+
+EmitKit v3 is live at `app.emitkit.com`, with the API at `api.emitkit.com`.
+
+- **Dashboard.** A live event console you can filter by Project, Channel,
+  source, or text, with every event's metadata a click away. Manage Projects
+  and Channels, invite members with roles, and manage API keys. The dashboard
+  installs as an app on your phone or computer.
+- **Push notifications.** Turn them on in **Settings → Notifications** to get
+  events on your devices, for every Channel or only the ones you pick. Events
+  sent with `notify: false` stay quiet.
+- **Erase a user on request.** `DELETE /v1/identities/{user_id}` deletes an
+  identity and its aliases, so you can honour an erasure request straight away.
+- **MCP server.** Agents can create events, identify users, and erase
+  identities at `https://api.emitkit.com/mcp` with an API key.
+- **Safer retries and clearer limits.** `Idempotency-Key` replays the first
+  response for 24 hours. Authenticated responses carry rate-limit headers,
+  and going over the limit returns `429` with `Retry-After`.
+- **Documentation.** Guides, the API reference, and this changelog now live
+  at `emitkit.com/docs`, with Markdown and `llms.txt` versions for agents.
+
+Accounts, Organizations, and API keys from the previous version of EmitKit
+weren't carried over. Sign up again and create a new API key: keys still start
+with `emitkit_`, but old keys no longer work.

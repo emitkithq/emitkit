@@ -1,0 +1,60 @@
+---
+title: API keys
+description: Create, rotate, and revoke the Project-bound keys that authenticate your servers and agents.
+sidebar:
+  order: 1
+---
+
+API keys authenticate servers and MCP clients. Each key starts with
+`emitkit_` followed by 12 letters, belongs to one Organization, and is bound to
+one Project: the events it sends land in that Project. A key with full access
+can create and read events, identify users, and erase identities for its
+Organization. A **read-only** key can only read the Project's events and
+channels: give one to dashboards, reports and agents that only look. Keys don't
+expire.
+
+Every member can see the Organization's keys (by name and visible prefix).
+Only owners and admins can create, reveal, rotate, or revoke them.
+
+## Create a key
+
+<Steps>
+  <Step title="Open API keys">
+    In the dashboard, open **Settings → API keys**.
+  </Step>
+  <Step title="Name it and pick the Project">
+    Choose a recognizable name, the Project its events belong to, and its
+    access: **Full access** or **Read-only**.
+  </Step>
+  <Step title="Store the secret">
+    Copy the key into a secret manager. Don't put it in a browser bundle,
+    mobile app, URL, repository, log, or analytics property.
+  </Step>
+</Steps>
+
+## Reveal a key again
+
+Owners and admins can show a key again with **Reveal** in
+**Settings → API keys**. EmitKit checks requests against a hash of the key and
+keeps the key itself encrypted, so it can be revealed but never read from the
+database. Keys created before revealing existed have no encrypted copy: rotate
+one to make it revealable.
+
+## Rotate or revoke
+
+**Rotate** a key when an integration changes owners, the secret may have been
+exposed, or your policy requires it. Rotation creates a new key with the same
+name, Project and access, and deletes the old one immediately, so update the
+integration right away. Idempotency keys used with the old key don't carry
+over.
+
+**Revoke** deletes the key immediately. Requests that use it get `401`.
+
+If a key's Project is deleted, the key can't create events (`403`) until the
+Project is restored. Deleted Projects are purged after 90 days, together with
+their keys.
+
+:::warning
+Never send a real key in a support request. Share its name or visible prefix
+instead.
+:::

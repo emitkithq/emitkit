@@ -1,0 +1,92 @@
+# EmitKit E2E report — local, 2026-09-26
+
+- Target: **local**
+- Commit: `785a751`
+- Started: 2026-09-26T13:38:47.442Z · duration 75s
+- Result: **47 passed, 1 failed, 11 skipped**
+
+Reproduce: `E2E_TARGET=local pnpm e2e && E2E_TARGET=local pnpm e2e:report` (see e2e/README.md).
+Open a trace with `pnpm exec playwright show-trace <file>`. Traces are redacted:
+API keys, cookies, tokens and the test password are replaced by `[REDACTED]`.
+
+| | Scenario | Test | Time | Evidence |
+| --- | --- | --- | --- | --- |
+| ⏭️ | `01-routing.spec.ts` | marketing site serves prerendered pages | 0.0s | [trace](traces/01-routing-marketing-site-serves-prerendered-pages.zip) |
+| ✅ | `01-routing.spec.ts` | site assets and SEO files | 0.2s | [trace](traces/01-routing-site-assets-and-seo-files.zip) |
+| ⏭️ | `01-routing.spec.ts` | www redirects to the apex (production only) | 0.0s | [trace](traces/01-routing-www-redirects-to-the-apex-production-only.zip) |
+| ✅ | `01-routing.spec.ts` | app host serves the PWA shell, manifest and service worker | 0.1s | [trace](traces/01-routing-app-host-serves-the-pwa-shell-manifest-and-service-worker.zip) |
+| ✅ | `01-routing.spec.ts` | api host serves health and the OpenAPI document | 0.1s | [trace](traces/01-routing-api-host-serves-health-and-the-openapi-document.zip) |
+| ✅ | `02-public-api.spec.ts` | SDK creates events with rate-limit info and request ids | 0.0s | [http log](logs/02-public-api-sdk-creates-events-with-rate-limit-info-and-request-ids.json) · [trace](traces/02-public-api-sdk-creates-events-with-rate-limit-info-and-request-ids.zip) |
+| ✅ | `02-public-api.spec.ts` | SDK idempotency replays the first response | 0.0s | [http log](logs/02-public-api-sdk-idempotency-replays-the-first-response.json) · [trace](traces/02-public-api-sdk-idempotency-replays-the-first-response.zip) |
+| ✅ | `02-public-api.spec.ts` | SDK identify merges properties and claims aliases | 0.0s | [trace](traces/02-public-api-sdk-identify-merges-properties-and-claims-aliases.zip) |
+| ✅ | `02-public-api.spec.ts` | SDK surfaces validation errors | 0.0s | [trace](traces/02-public-api-sdk-surfaces-validation-errors.zip) |
+| ✅ | `02-public-api.spec.ts` | raw HTTP error contract | 0.0s | [http log](logs/02-public-api-raw-http-error-contract.json) · [trace](traces/02-public-api-raw-http-error-contract.zip) |
+| ✅ | `02-public-api.spec.ts` | routing contract | 0.1s | [http log](logs/02-public-api-routing-contract.json) · [trace](traces/02-public-api-routing-contract.zip) |
+| ✅ | `02-public-api.spec.ts` | identity erasure | 0.0s | [trace](traces/02-public-api-identity-erasure.zip) |
+| ✅ | `02-public-api.spec.ts` | events are visible in the dashboard immediately | 0.0s | [http log](logs/02-public-api-events-are-visible-in-the-dashboard-immediately.json) · [trace](traces/02-public-api-events-are-visible-in-the-dashboard-immediately.zip) |
+| ✅ | `02-public-api.spec.ts` | MCP: initialize, list tools, create an event | 0.0s | [http log](logs/02-public-api-mcp-initialize-list-tools-create-an-event.json) · [trace](traces/02-public-api-mcp-initialize-list-tools-create-an-event.zip) |
+| ✅ | `02-public-api.spec.ts` | MCP transport: methods, notifications, every tool, shared request id | 0.0s | [http log](logs/02-public-api-mcp-transport-methods-notifications-every-tool-shared-request-id.json) · [trace](traces/02-public-api-mcp-transport-methods-notifications-every-tool-shared-request-id.zip) |
+| ✅ | `02-public-api.spec.ts` | rate limit: the 101st request in a minute gets 429 with Retry-After | 0.5s | [http log](logs/02-public-api-rate-limit-the-101st-request-in-a-minute-gets-429-with-retry-after.json) · [trace](traces/02-public-api-rate-limit-the-101st-request-in-a-minute-gets-429-with-retry-after.zip) |
+| ✅ | `03-auth.spec.ts` | signed-out visitors are sent to sign-in | 1.0s | [screenshot](screenshots/03-auth-signed-out-visitors-are-sent-to-sign-in-test-finished-1.png) · [trace](traces/03-auth-signed-out-visitors-are-sent-to-sign-in.zip) |
+| ✅ | `03-auth.spec.ts` | sign up, create a workspace, sign out, sign back in | 2.9s | [screenshot](screenshots/03-auth-sign-up-create-a-workspace-sign-out-sign-back-in-test-finished-1.png) · [trace](traces/03-auth-sign-up-create-a-workspace-sign-out-sign-back-in.zip) |
+| ✅ | `03-auth.spec.ts` | password reset and magic link requests are accepted | 1.3s | [screenshot](screenshots/03-auth-password-reset-and-magic-link-requests-are-accepted-test-finished-1.png) · [trace](traces/03-auth-password-reset-and-magic-link-requests-are-accepted.zip) |
+| ✅ | `04-dashboard.spec.ts` | setup guide: workspace, revealed key, first event, phone | 4.7s | [screenshot](screenshots/04-dashboard-setup-guide-workspace-revealed-key-first-event-phone-test-finished-1.png) · [trace](traces/04-dashboard-setup-guide-workspace-revealed-key-first-event-phone.zip) |
+| ✅ | `04-dashboard.spec.ts` | events feed: live updates, pulse, search, channel, details, delete | 9.5s | [screenshot](screenshots/04-dashboard-events-feed-live-updates-pulse-search-channel-details-delete-test-finished-1.png) · [trace](traces/04-dashboard-events-feed-live-updates-pulse-search-channel-details-delete.zip) |
+| ✅ | `04-dashboard.spec.ts` | API keys: create, rotate, revoke | 2.8s | [screenshot](screenshots/04-dashboard-api-keys-create-rotate-revoke-test-finished-1.png) · [trace](traces/04-dashboard-api-keys-create-rotate-revoke.zip) |
+| ✅ | `04-dashboard.spec.ts` | settings: a modal over the current page; old addresses redirect | 2.4s | [screenshot](screenshots/04-dashboard-settings-a-modal-over-the-current-page-old-addresses-redirect-test-finished-1.png) · [trace](traces/04-dashboard-settings-a-modal-over-the-current-page-old-addresses-redirect.zip) |
+| ✅ | `04-dashboard.spec.ts` | members: invite and cancel | 1.2s | [screenshot](screenshots/04-dashboard-members-invite-and-cancel-test-finished-1.png) · [trace](traces/04-dashboard-members-invite-and-cancel.zip) |
+| ✅ | `04-dashboard.spec.ts` | members: an unverified invitee is asked to verify before accepting | 2.5s | [screenshot](screenshots/04-dashboard-members-an-unverified-invitee-is-asked-to-verify-before-accepting-test-finished-1.png) · [screenshot](screenshots/04-dashboard-members-an-unverified-invitee-is-asked-to-verify-before-accepting-test-finished-2.png) · [trace](traces/04-dashboard-members-an-unverified-invitee-is-asked-to-verify-before-accepting.zip) |
+| ✅ | `04-dashboard.spec.ts` | organization switcher keeps workspaces apart | 2.8s | [screenshot](screenshots/04-dashboard-organization-switcher-keeps-workspaces-apart-test-finished-1.png) · [trace](traces/04-dashboard-organization-switcher-keeps-workspaces-apart.zip) |
+| ✅ | `06-account-pwa.spec.ts` | profile: rename yourself | 3.1s | [screenshot](screenshots/06-account-pwa-profile-rename-yourself-test-finished-1.png) · [trace](traces/06-account-pwa-profile-rename-yourself.zip) |
+| ✅ | `06-account-pwa.spec.ts` | password: change it, then only the new one signs in | 1.2s | [screenshot](screenshots/06-account-pwa-password-change-it-then-only-the-new-one-signs-in-test-finished-1.png) · [trace](traces/06-account-pwa-password-change-it-then-only-the-new-one-signs-in.zip) |
+| ✅ | `06-account-pwa.spec.ts` | organization: rename and re-slug | 2.0s | [screenshot](screenshots/06-account-pwa-organization-rename-and-re-slug-test-finished-1.png) · [trace](traces/06-account-pwa-organization-rename-and-re-slug.zip) |
+| ⏭️ | `06-account-pwa.spec.ts` | PWA: install prompt and new-version notice | 1.6s | [screenshot](screenshots/06-account-pwa-pwa-install-prompt-and-new-version-notice-test-finished-1.png) · [trace](traces/06-account-pwa-pwa-install-prompt-and-new-version-notice.zip) |
+| ✅ | `06-account-pwa.spec.ts` | deleting an organization revokes its API keys | 1.6s | [screenshot](screenshots/06-account-pwa-deleting-an-organization-revokes-its-api-keys-test-finished-1.png) · [trace](traces/06-account-pwa-deleting-an-organization-revokes-its-api-keys.zip) |
+| ✅ | `06-account-pwa.spec.ts` | deleting the account deletes the organizations it owns alone | 1.7s | [screenshot](screenshots/06-account-pwa-deleting-the-account-deletes-the-organizations-it-owns-alone-test-finished-1.png) · [trace](traces/06-account-pwa-deleting-the-account-deletes-the-organizations-it-owns-alone.zip) |
+| ✅ | `10-projects.spec.ts` | the list shows each project with its channels and first-event state | 0.7s | [screenshot](screenshots/10-projects-the-list-shows-each-project-with-its-channels-and-first-event-state-test-finished-1.png) · [trace](traces/10-projects-the-list-shows-each-project-with-its-channels-and-first-event-state.zip) |
+| ✅ | `10-projects.spec.ts` | create a project with a long name, a website and a description | 0.4s | [screenshot](screenshots/10-projects-create-a-project-with-a-long-name-a-website-and-a-description-test-finished-1.png) · [trace](traces/10-projects-create-a-project-with-a-long-name-a-website-and-a-description.zip) |
+| ✅ | `10-projects.spec.ts` | edit a project from its row menu | 0.7s | [screenshot](screenshots/10-projects-edit-a-project-from-its-row-menu-test-finished-1.png) · [trace](traces/10-projects-edit-a-project-from-its-row-menu.zip) |
+| ✅ | `10-projects.spec.ts` | delete asks first, then the project waits under Deleted until restored | 1.8s | [screenshot](screenshots/10-projects-delete-asks-first-then-the-project-waits-under-deleted-until-restore-test-finished-1.png) · [trace](traces/10-projects-delete-asks-first-then-the-project-waits-under-deleted-until-restore.zip) |
+| ✅ | `10-projects.spec.ts` | with no projects, the empty state offers to create one | 0.7s | [screenshot](screenshots/10-projects-with-no-projects-the-empty-state-offers-to-create-one-test-finished-1.png) · [trace](traces/10-projects-with-no-projects-the-empty-state-offers-to-create-one.zip) |
+| ✅ | `11-channels.spec.ts` | with no channels, the empty state offers to create one | 0.7s | [screenshot](screenshots/11-channels-with-no-channels-the-empty-state-offers-to-create-one-test-finished-1.png) · [trace](traces/11-channels-with-no-channels-the-empty-state-offers-to-create-one.zip) |
+| ✅ | `11-channels.spec.ts` | create a channel in a chosen project, with a suggested icon | 0.5s | [screenshot](screenshots/11-channels-create-a-channel-in-a-chosen-project-with-a-suggested-icon-test-finished-1.png) · [trace](traces/11-channels-create-a-channel-in-a-chosen-project-with-a-suggested-icon.zip) |
+| ✅ | `11-channels.spec.ts` | edit changes the icon and description, never the name | 0.8s | [screenshot](screenshots/11-channels-edit-changes-the-icon-and-description-never-the-name-test-finished-1.png) · [trace](traces/11-channels-edit-changes-the-icon-and-description-never-the-name.zip) |
+| ✅ | `11-channels.spec.ts` | a channel created by an event shows up too | 0.7s | [screenshot](screenshots/11-channels-a-channel-created-by-an-event-shows-up-too-test-finished-1.png) · [trace](traces/11-channels-a-channel-created-by-an-event-shows-up-too.zip) |
+| ✅ | `11-channels.spec.ts` | the project filter narrows the list and lives in the URL | 0.7s | [screenshot](screenshots/11-channels-the-project-filter-narrows-the-list-and-lives-in-the-url-test-finished-1.png) · [trace](traces/11-channels-the-project-filter-narrows-the-list-and-lives-in-the-url.zip) |
+| ✅ | `11-channels.spec.ts` | View events opens the feed on that channel | 1.5s | [screenshot](screenshots/11-channels-view-events-opens-the-feed-on-that-channel-test-finished-1.png) · [trace](traces/11-channels-view-events-opens-the-feed-on-that-channel.zip) |
+| ✅ | `11-channels.spec.ts` | delete asks first, then removes the row | 0.8s | [screenshot](screenshots/11-channels-delete-asks-first-then-removes-the-row-test-finished-1.png) · [trace](traces/11-channels-delete-asks-first-then-removes-the-row.zip) |
+| ✅ | `14-billing.spec.ts` | billing off: nothing is gated | 1.7s | [screenshot](screenshots/14-billing-billing-off-nothing-is-gated-test-finished-1.png) · [http log](logs/14-billing-billing-off-nothing-is-gated.json) · [trace](traces/14-billing-billing-off-nothing-is-gated.zip) |
+| ⏭️ | `14-billing.spec.ts` | a new organization starts on the trial paywall | 0.0s | [screenshot](screenshots/14-billing-a-new-organization-starts-on-the-trial-paywall-test-finished-1.png) · [trace](traces/14-billing-a-new-organization-starts-on-the-trial-paywall.zip) |
+| ⏭️ | `14-billing.spec.ts` | the trial starts through Stripe's test checkout and lands in the setup guide | 0.0s | [screenshot](screenshots/14-billing-the-trial-starts-through-stripe-s-test-checkout-and-lands-in-the-setu-test-finished-1.png) · [trace](traces/14-billing-the-trial-starts-through-stripe-s-test-checkout-and-lands-in-the-setu.zip) |
+| ⏭️ | `14-billing.spec.ts` | adding a seat shows the price first, then invites work | 0.0s | [screenshot](screenshots/14-billing-adding-a-seat-shows-the-price-first-then-invites-work-test-finished-1.png) · [trace](traces/14-billing-adding-a-seat-shows-the-price-first-then-invites-work.zip) |
+| ⏭️ | `14-billing.spec.ts` | the webhook only accepts Autumn's signature | 0.0s | [screenshot](screenshots/14-billing-the-webhook-only-accepts-autumn-s-signature-test-finished-1.png) · [trace](traces/14-billing-the-webhook-only-accepts-autumn-s-signature.zip) |
+| ❌ | `15-push-preferences.spec.ts` | one switch turns this device on for every organization | 0.0s | [screenshot](screenshots/15-push-preferences-one-switch-turns-this-device-on-for-every-organization-test-failed-1.png) · [screenshot](screenshots/15-push-preferences-one-switch-turns-this-device-on-for-every-organization-test-failed-2.png) · [trace](traces/15-push-preferences-one-switch-turns-this-device-on-for-every-organization.zip) |
+| ⏭️ | `15-push-preferences.spec.ts` | an organization can be switched off or narrowed to channels | 0.0s |  |
+| ⏭️ | `15-push-preferences.spec.ts` | an organization created later picks this device up | 0.0s |  |
+| ⏭️ | `15-push-preferences.spec.ts` | organizations you don't belong to are refused | 0.0s |  |
+| ✅ | `17-telemetry.spec.ts` | a sign-up is identified and reported with its request | 7.3s | [trace](traces/17-telemetry-a-sign-up-is-identified-and-reported-with-its-request.zip) |
+| ✅ | `17-telemetry.spec.ts` | the workspace, the setup guide's test event and a first real event | 0.0s | [http log](logs/17-telemetry-the-workspace-the-setup-guide-s-test-event-and-a-first-real-event.json) · [trace](traces/17-telemetry-the-workspace-the-setup-guide-s-test-event-and-a-first-real-event.zip) |
+| ✅ | `17-telemetry.spec.ts` | 100 events through the API is a milestone, reported once | 0.9s | [http log](logs/17-telemetry-100-events-through-the-api-is-a-milestone-reported-once.json) · [trace](traces/17-telemetry-100-events-through-the-api-is-a-milestone-reported-once.zip) |
+| ⏭️ | `17-telemetry.spec.ts` | checkout and Autumn's billing webhooks become billing events | 0.0s | [trace](traces/17-telemetry-checkout-and-autumn-s-billing-webhooks-become-billing-events.zip) |
+| ✅ | `17-telemetry.spec.ts` | deleting the organization and the account is reported as churn | 0.1s | [trace](traces/17-telemetry-deleting-the-organization-and-the-account-is-reported-as-churn.zip) |
+| ✅ | `17-telemetry.spec.ts` | E2E and dev accounts are never reported | 3.1s | [http log](logs/17-telemetry-e2e-and-dev-accounts-are-never-reported.json) · [trace](traces/17-telemetry-e2e-and-dev-accounts-are-never-reported.zip) |
+
+## Failures
+
+### 15-push-preferences.spec.ts › one switch turns this device on for every organization
+
+```
+Error: [2mexpect([22m[31mreceived[39m[2m).[22mtoBe[2m([22m[32mexpected[39m[2m) // Object.is equality[22m
+
+Expected: [32mtrue[39m
+Received: [31mfalse[39m
+
+  92 |     }
+  93 |   );
+> 94 |   expect(signUp.ok()).toBe(true);
+     |                       ^
+  95 |   for (const name of ["E2E Prefs One", "E2E Prefs Two"]) {
+  96 |     const workspace = await rpc<{
+  97 |       organizationId: string;
+    at e2e/scenarios/15-push-preferences.spec.ts:94:23
+```

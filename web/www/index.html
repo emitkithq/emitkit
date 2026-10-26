@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en" class="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light" />
+    <meta name="theme-color" content="#f4f4f2" />
+    <title>EmitKit</title>
+    <style>
+      /* The header renders both; one shows from the first paint. Inline and
+         unlayered, so it applies before any stylesheet loads and beats the
+         buttons' own display. */
+      html:not([data-signed-in]) [data-session="signed-in"],
+      html[data-signed-in] [data-session="signed-out"] {
+        display: none;
+      }
+    </style>
+    <script>
+      // Signed in to the dashboard? Then the header shows Dashboard instead of
+      // Sign in. The cookie is set by the app host
+      // (src/server/platform/session-hint.ts) and holds no secret.
+      (function () {
+        function mark() {
+          var signedIn = /(?:^|; )emitkit_signed_in=1(?:;|$)/.test(
+            document.cookie
+          );
+          document.documentElement.toggleAttribute("data-signed-in", signedIn);
+        }
+        mark();
+        // A page restored from the back-forward cache after signing out.
+        addEventListener("pageshow", mark);
+      })();
+    </script>
+    <!--ssr-head-->
+    <link rel="icon" href="/favicon.ico" sizes="48x48" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/favicon-96x96.png" sizes="96x96" type="image/png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180" />
+    <link rel="manifest" href="/site.webmanifest" />
+  </head>
+  <body>
+    <div id="root"><!--ssr-outlet--></div>
+    <script type="module" src="./main.tsx"></script>
+  </body>
+</html>

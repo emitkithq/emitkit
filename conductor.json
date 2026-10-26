@@ -1,0 +1,8 @@
+{
+  "scripts": {
+    "setup": "zsh scripts/workspace-setup.sh",
+    "run": "PORT=$CONDUCTOR_PORT pnpm dev",
+    "archive": ""
+  },
+  "runScriptMode": "nonconcurrent"
+}

@@ -1,0 +1,17 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2024", "DOM", "DOM.Iterable"],
+    "types": ["node"]
+  },
+  "include": [
+    "alchemy.run.ts",
+    "autumn.config.ts",
+    "vite.config.ts",
+    "oxlint.config.ts",
+    "oxfmt.config.ts",
+    "playwright.config.ts",
+    "e2e/**/*.ts",
+    "scripts/**/*.ts"
+  ]
+}

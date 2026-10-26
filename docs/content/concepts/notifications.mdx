@@ -1,0 +1,37 @@
+---
+title: Push notifications
+description: Get an alert on your phone or computer when an event arrives.
+sidebar:
+  order: 2
+---
+
+Every event with `notify` set to `true` (the default) sends a push
+notification to the members of its Organization who turned notifications on.
+Set `notify: false` for routine events that shouldn't alert anyone.
+
+## Turn notifications on
+
+<Steps>
+  <Step title="Open Settings → Notifications">
+    Notifications are set per device and browser, and per Organization.
+  </Step>
+  <Step title="Enable notifications">
+    Allow notifications when the browser asks. By default you get events from
+    every Channel, including Channels created later. You can narrow that to
+    specific Projects or Channels.
+  </Step>
+  <Step title="Send a test notification">
+    Check that it arrives, then send a real event.
+  </Step>
+</Steps>
+
+On iPhone and iPad, add EmitKit to your Home Screen (Share → **Add to Home
+Screen**) and open it from there before you turn notifications on. iOS only
+delivers push notifications to installed web apps.
+
+## What a notification shows
+
+The title is the event's icon and title, for example `🚨 Checkout failed`. The
+body is the event's description followed by its Channel and Project, such as
+`#alerts · Web`. Opening the notification shows that Channel's events in the
+dashboard.

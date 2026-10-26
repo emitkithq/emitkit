@@ -1,0 +1,14 @@
+diff --git a/dist/index.mjs b/dist/index.mjs
+index bf85c8b78915bee1252a41420a742b306ed3bcdd..719a01872a78d2e5f75c075e0aff0d018cb15b0e 100644
+--- a/dist/index.mjs
++++ b/dist/index.mjs
+@@ -1821,8 +1821,7 @@ async function consumeRateLimit(ctx, apiKey, opts) {
+ 					value: decision.max
+ 				}
+ 			],
+-			increment: { requestCount: 1 },
+-			set: { lastRequest: decision.now }
++			increment: { requestCount: 1 }
+ 		});
+ 		if (incremented) return incremented;
+ 		const fresh = await ctx.context.adapter.findOne({

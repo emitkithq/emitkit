@@ -1,0 +1,68 @@
+---
+title: TypeScript SDK
+description: Send events, ask people for decisions and get the answers, from TypeScript or JavaScript with @emitkit/js.
+sidebar:
+  order: 0
+---
+
+`@emitkit/js` wraps EmitKit's API for TypeScript and JavaScript on the
+server: Node 20.3+, Bun, Deno, Cloudflare Workers, or anything with `fetch`. It
+has no dependencies, and every request and response is typed.
+
+:::note
+Version 3 is in preview: install it with `npm install @emitkit/js@next`.
+Upgrading from 2.x takes three small changes; see
+[MIGRATING.md](https://github.com/emitkithq/sdks/blob/main/packages/js/MIGRATING.md).
+:::
+
+## Install
+
+<CodeGroup>
+```bash npm
+npm install @emitkit/js@next
+```
+```bash pnpm
+pnpm add @emitkit/js@next
+```
+```bash bun
+bun add @emitkit/js@next
+```
+</CodeGroup>
+
+## Send an event
+
+```typescript
+import { EmitKit } from "@emitkit/js";
+
+const emitkit = new EmitKit(); // reads EMITKIT_API_KEY
+
+const event = await emitkit.events.create({
+  channelName: "payments",
+  title: "New subscription",
+  icon: "💰",
+  metadata: { amount: 49, currency: "USD", plan: "pro" },
+  userId: "user_123",
+});
+
+console.log(event.id);
+```
+
+The [API key](/api/api-keys) selects the Project, and `channelName` selects
+or creates a Channel in it. Keep the key on the server: never put it in a
+browser bundle or a public environment variable. Pass it explicitly with
+`new EmitKit("emitkit_…")` if it isn't in `EMITKIT_API_KEY`.
+
+<CardGroup cols={2}>
+  <Card title="Events" href="/sdk/events" icon="activity">
+    Send, read and list events and channels.
+  </Card>
+  <Card title="Ask for a decision" href="/sdk/questions" icon="circle-help">
+    Buttons and fields, `ask()`, and callbacks.
+  </Card>
+  <Card title="Identify users" href="/sdk/identify" icon="user">
+    Identities, properties, and aliases.
+  </Card>
+  <Card title="Errors" href="/sdk/error-handling" icon="triangle-alert">
+    One error class with a stable `code`.
+  </Card>
+</CardGroup>

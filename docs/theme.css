@@ -1,0 +1,7 @@
+/*
+ * The header wordmark (the brand kit's artwork) must render at least 96px
+ * wide; at 28px tall it is about 103px.
+ */
+img[src*="/wordmark-"] {
+  height: 28px;
+}

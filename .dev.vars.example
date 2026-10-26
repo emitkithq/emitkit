@@ -1,0 +1,5 @@
+# Local Worker secrets for `pnpm dev`. Copy to .dev.vars (gitignored).
+# docs/content/self-hosting/development.md shows how to generate a VAPID
+# pair; the public half goes in wrangler.jsonc.
+BETTER_AUTH_SECRET=
+VAPID_PRIVATE_KEY=

@@ -1,0 +1,90 @@
+---
+title: Ask for a decision
+description: Send an event with buttons or fields, wait for the answer with ask(), or have it posted to your callback.
+sidebar:
+  order: 2
+---
+
+An event with buttons (actions with an `id`) or fields
+[waits for an answer](/concepts/questions): members subscribed to its Channel
+get a push, and the first to answer decides.
+
+## Wait for it: `ask()`
+
+```typescript
+const { answer } = await emitkit.ask({
+  channelName: "refunds",
+  title: "Refund Jane Cooper $240 for order #1042?",
+  fields: [
+    { id: "note", type: "text", label: "Note to Jane", multiline: true },
+  ],
+  actions: [
+    { id: "approve", label: "Refund", style: "primary" },
+    { id: "deny", label: "Don't refund", style: "destructive", requires: ["note"] },
+    { label: "Open order", url: "https://shop.example.com/orders/1042" },
+  ],
+  expiresIn: 1800,
+});
+
+if (answer.status === "answered" && answer.action === "approve") {
+  await refund(1042);
+}
+// Everything else (deny, expired, canceled) is a no.
+```
+
+`ask()` sends the event and checks every 3 seconds until it's answered,
+expires or is canceled. `answer.values` holds each field's value by id, and
+`answer.by` who answered. Options:
+
+- `timeout` (ms): stop waiting sooner. The event keeps waiting; `answer.status`
+  is still `pending` and you can read it later with `events.get(id)`.
+- `signal`: an `AbortSignal` that stops waiting.
+- `pollInterval` (ms, default 3,000), and `idempotencyKey`. A retried network
+  call never asks twice.
+
+`ask()` suits scripts, CLIs and agent sessions: processes that live as long as
+the wait. Serverless functions should use a callback.
+
+## Or get a callback
+
+Send `callbackUrl`, and your own state in `resume`; EmitKit POSTs the answer
+(or the expiry) there, signed:
+
+```typescript
+await emitkit.events.create({
+  channelName: "refunds",
+  title: "Refund Jane $240?",
+  actions: [
+    { id: "approve", label: "Refund" },
+    { id: "deny", label: "Don't" },
+  ],
+  callbackUrl: "https://shop.example.com/api/emitkit",
+  resume: JSON.stringify({ orderId: 1042 }),
+});
+```
+
+```typescript
+// app/api/emitkit/route.ts
+import { verifyCallback } from "@emitkit/js";
+
+export const POST = async (request: Request) => {
+  const callback = await verifyCallback(request); // EMITKIT_CALLBACK_SECRET
+  if (callback.type === "event.answered" && callback.answer.action === "approve") {
+    const { orderId } = JSON.parse(callback.resume ?? "{}");
+    await refund(orderId);
+  }
+  return new Response(null, { status: 204 });
+};
+```
+
+`verifyCallback` checks the signature and timestamp with the Project's
+callback signing secret (`whsec_…`, in **Settings → API keys**; pass
+`{ secret }` or set `EMITKIT_CALLBACK_SECRET`). It throws an `EmitKitError`
+with code `invalid_signature` when the callback doesn't check out. A callback
+can arrive more than once with the same `webhook-id`: act on it once.
+
+## Stop waiting
+
+```typescript
+await emitkit.events.cancel(eventId); // pending → canceled; fine to call twice
+```

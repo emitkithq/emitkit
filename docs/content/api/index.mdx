@@ -1,0 +1,143 @@
+---
+title: Public API
+description: Authenticate with an API key, then create events and identify users within your Organization.
+sidebar:
+  order: 0
+---
+
+The EmitKit API v1 has these operations:
+
+- `createEvent` sends an event to a named Channel. EmitKit creates the Channel
+  when it doesn't exist yet. With buttons or fields, the event
+  [asks for a decision](/concepts/questions) and waits for an answer.
+- `getEvent` reads an event back, with its answer.
+- `listEvents` lists the Project's recent events, newest first.
+- `cancelEvent` stops an event from waiting when you no longer need the answer.
+- `listChannels` lists the Project's channels.
+- `identifyUser` creates or updates the identity of one of your users.
+- `deleteIdentity` erases an identity, so you can honour one of your users'
+  erasure requests without waiting for retention.
+- `me` says who a key is: its Organization, Project and scopes.
+
+The base URL is `https://api.emitkit.com`. Every `/v1/*` route is also served
+at `/api/v1/*`.
+
+<CardGroup cols={2}>
+  <Card title="Create Event" href="/reference/events/create-event" icon="activity">
+    The request, response, and retry contract.
+  </Card>
+  <Card title="Get Event" href="/reference/events/get-event" icon="search">
+    Read an event back, with its answer.
+  </Card>
+  <Card title="List Events" href="/reference/events/list-events" icon="list">
+    The Project's events, newest first, page by page.
+  </Card>
+  <Card title="Cancel Event" href="/reference/events/cancel-event" icon="x">
+    Stop an event from waiting for an answer.
+  </Card>
+  <Card title="List Channels" href="/reference/events/list-channels" icon="hash">
+    The channel names already in use.
+  </Card>
+  <Card title="Identify User" href="/reference/identity/identify-user" icon="user">
+    Identities, properties, and aliases.
+  </Card>
+  <Card title="Delete Identity" href="/reference/identity/delete-identity" icon="user-x">
+    Erase one person's identity and aliases.
+  </Card>
+  <Card title="API keys" href="/api/api-keys" icon="key">
+    Create, rotate, and revoke keys.
+  </Card>
+  <Card title="Complete reference" href="/reference" icon="book-open">
+    Every schema, example, and error response.
+  </Card>
+</CardGroup>
+
+## Authentication
+
+Send an EmitKit API key in one of these headers:
+
+```http
+Authorization: Bearer emitkit_REPLACEWITHKEY
+```
+
+```http
+X-API-Key: emitkit_REPLACEWITHKEY
+```
+
+If you send both, they must carry the same key. A key belongs to one
+Organization and is bound to one Project. EmitKit takes the Organization and
+Project from the key; IDs in a request body never select them.
+
+A key has **full access** or is **read-only**. Each operation needs a scope:
+
+| Scope | Operations | Read-only keys |
+| --- | --- | --- |
+| `events:write` | `createEvent`, `cancelEvent` | No |
+| `events:read` | `getEvent`, `listEvents`, `listChannels` | Yes |
+| `identities:write` | `identifyUser`, `deleteIdentity` | No |
+
+`GET /v1/me` works with any key and returns its scopes. A key without the
+scope an operation needs gets `403` with code `forbidden`.
+
+## Listing events
+
+`GET /v1/events` returns the Project's events, newest first, each shaped like
+`getEvent`'s. Filter with `channel` (a name, as you send it in
+`channelName`), `since` (inclusive) and `before` (ISO 8601 times with their
+zone, like `2026-09-26T10:00:00Z`) and `limit` (1 to 100, default 50). For the
+next page, pass the previous page's `nextCursor` as `before`; it's `null` on
+the last page. Treat `nextCursor` as opaque. Unknown parameters are refused
+with a `400`, so a typo never silently drops a filter.
+
+```bash
+curl "https://api.emitkit.com/v1/events?channel=orders&limit=20" \
+  -H "Authorization: Bearer $EMITKIT_API_KEY"
+```
+
+## Limits
+
+- **Rate limit:** up to 100 requests per API key in a 60-second window. A
+  window starts with the key's first request and lasts 60 seconds, so a steady
+  client (polling an answer every few seconds, say) never runs into it.
+  Responses include `X-RateLimit-Limit`, `X-RateLimit-Remaining`, and
+  `X-RateLimit-Reset`. Over the limit you get `429 Too Many Requests` with
+  `Retry-After`.
+- **Request size:** request bodies are limited to 1 MiB, checked before
+  authentication (`413`).
+- **Event size:** a stored event is limited to 16 KB across its fields,
+  including metadata (`413`).
+
+## Errors and request IDs
+
+Error bodies carry a stable `code` to switch on, and `error` and `message` for
+people:
+
+| `code` | Status | Means |
+| --- | --- | --- |
+| `validation_error` | 400 | The request doesn't match the contract; `details` lists each problem's `path` and fix. |
+| `unauthorized` | 401 | The API key is missing or invalid. |
+| `forbidden` | 403 | The key lacks the operation's scope (read-only keys only read), or its Project was deleted, or it isn't bound to one. |
+| `not_found` | 404 | No such route, event or identity. |
+| `idempotency_conflict` | 409 | The `Idempotency-Key` was used with a different request. |
+| `not_pending` | 409 | Only a pending event can be canceled; `message` says what happened to it. |
+| `not_waiting` | 409 | The event doesn't ask anything, so there is nothing to cancel. |
+| `payload_too_large` | 413 | Over the request or event size limit. |
+| `rate_limited` | 429 | Over the rate limit; wait `Retry-After` seconds. |
+| `internal_error` | 500 | Something failed on our side; retrying is safe with an `Idempotency-Key`. |
+
+Every response carries an `X-Request-ID` header, and error bodies repeat it as
+`requestId`. Include it when you contact support. Error bodies never contain
+credentials or internal details.
+
+## Erasing a user
+
+`DELETE /v1/identities/{user_id}` erases one person's identity: its properties
+and aliases are deleted. The events you already sent are kept for their normal
+90 days, but the dashboard no longer shows that person on events recorded
+before the erasure. Titles and metadata aren't changed, so don't put personal
+data you may need to erase there.
+
+Pass the canonical `user_id`; an alias isn't accepted. The response is
+`200 OK` with `"status": "erased"`, or `404 Not Found` when EmitKit doesn't
+know the user, so repeating a completed erasure doesn't report success. Any
+API key of the Organization can erase an identity.

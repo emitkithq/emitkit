@@ -1,0 +1,3572 @@
+{
+  "components": {
+    "headers": {
+      "IdempotentReplay": {
+        "description": "Present with value true when an idempotent command replays its original response.",
+        "schema": {
+          "enum": [
+            "true"
+          ],
+          "type": "string"
+        }
+      },
+      "RateLimitLimit": {
+        "description": "Maximum requests allowed in the current time window.",
+        "schema": {
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "RateLimitRemaining": {
+        "description": "Requests remaining in the current time window.",
+        "schema": {
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "RateLimitReset": {
+        "description": "Unix timestamp in seconds when the rate limit resets.",
+        "schema": {
+          "format": "int64",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "RetryAfter": {
+        "description": "Seconds to wait before retrying the request.",
+        "schema": {
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "WwwAuthenticate": {
+        "description": "Authentication challenge describing the required scheme and OAuth scope when applicable.",
+        "schema": {
+          "type": "string"
+        }
+      }
+    },
+    "schemas": {
+      "CreateEventRequest": {
+        "properties": {
+          "actions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z0-9_-]{1,64}$"
+                },
+                "label": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 40
+                },
+                "requires": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9_-]{1,64}$"
+                  },
+                  "description": "Ids of text or multiple-choice fields that must be filled in before this button can be pressed."
+                },
+                "style": {
+                  "type": "string",
+                  "enum": [
+                    "primary",
+                    "destructive"
+                  ]
+                },
+                "url": {
+                  "type": "string",
+                  "description": "A link: the page it opens",
+                  "maxLength": 2000
+                }
+              },
+              "required": [
+                "label"
+              ],
+              "additionalProperties": false
+            },
+            "maxItems": 4,
+            "description": "Up to 4. A button { id, label, style?, requires? } is an answer: the event then waits for someone to press one. A link { label, url } only opens a page."
+          },
+          "callbackUrl": {
+            "type": "string",
+            "description": "Where EmitKit POSTs the answer (event.answered) or the expiry (event.expired), signed with the project's callback secret (Standard Webhooks). https only.",
+            "maxLength": 2000
+          },
+          "channelName": {
+            "description": "Channel name. The Channel is created automatically when it does not exist.",
+            "maxLength": 255,
+            "minLength": 1,
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "displayAs": {
+            "enum": [
+              "message",
+              "notification"
+            ],
+            "type": "string"
+          },
+          "expiresIn": {
+            "type": "integer",
+            "minimum": 10,
+            "maximum": 604800,
+            "description": "Seconds an event with buttons or fields waits for an answer: 10 to 604800, default 86400 (24 hours). After that, answer.status is expired."
+          },
+          "fields": {
+            "type": "array",
+            "items": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "default": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "pattern": "^[A-Za-z0-9_-]{1,64}$"
+                        },
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "pattern": "^[A-Za-z0-9_-]{1,64}$"
+                          }
+                        }
+                      ],
+                      "description": "An option id (an array of ids when multiple). A single choice without one starts on its first option."
+                    },
+                    "id": {
+                      "type": "string",
+                      "pattern": "^[A-Za-z0-9_-]{1,64}$"
+                    },
+                    "label": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 100
+                    },
+                    "multiple": {
+                      "type": "boolean",
+                      "description": "Let the person pick several options (checkboxes)."
+                    },
+                    "options": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "pattern": "^[A-Za-z0-9_-]{1,64}$"
+                          },
+                          "label": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 100,
+                            "description": "What the person sees"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "label"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "minItems": 2,
+                      "maxItems": 10
+                    },
+                    "type": {
+                      "type": "string",
+                      "enum": [
+                        "choice"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "label",
+                    "options",
+                    "type"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "default": {
+                      "type": "string",
+                      "minLength": 0,
+                      "maxLength": 2000
+                    },
+                    "id": {
+                      "type": "string",
+                      "pattern": "^[A-Za-z0-9_-]{1,64}$"
+                    },
+                    "label": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 100
+                    },
+                    "maxLength": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 2000
+                    },
+                    "multiline": {
+                      "type": "boolean"
+                    },
+                    "placeholder": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 100
+                    },
+                    "type": {
+                      "type": "string",
+                      "enum": [
+                        "text"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "label",
+                    "type"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "default": {
+                      "type": "number"
+                    },
+                    "id": {
+                      "type": "string",
+                      "pattern": "^[A-Za-z0-9_-]{1,64}$"
+                    },
+                    "label": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 100
+                    },
+                    "max": {
+                      "type": "number"
+                    },
+                    "min": {
+                      "type": "number"
+                    },
+                    "step": {
+                      "type": "number",
+                      "exclusiveMinimum": 0
+                    },
+                    "type": {
+                      "type": "string",
+                      "enum": [
+                        "number"
+                      ]
+                    },
+                    "unit": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 8,
+                      "description": "Shown next to the value, e.g. $ or %"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "label",
+                    "type"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "default": {
+                      "type": "boolean"
+                    },
+                    "id": {
+                      "type": "string",
+                      "pattern": "^[A-Za-z0-9_-]{1,64}$"
+                    },
+                    "label": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 100
+                    },
+                    "type": {
+                      "type": "string",
+                      "enum": [
+                        "boolean"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "label",
+                    "type"
+                  ],
+                  "additionalProperties": false
+                }
+              ]
+            },
+            "maxItems": 5,
+            "description": "Up to 5 inputs the person fills in: a choice (one or several options), text, a number or a yes/no. The answer reports them in answer.values by field id. Fields without buttons get a Send button."
+          },
+          "icon": {
+            "type": "string"
+          },
+          "metadata": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JsonValue"
+            },
+            "propertyNames": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "notify": {
+            "default": true,
+            "description": "Send a web push notification to devices subscribed to the Channel.",
+            "type": "boolean"
+          },
+          "resume": {
+            "type": "string",
+            "maxLength": 65536,
+            "description": "Your own state, sent back as is in the callback and GET /v1/events/{id}, so a serverless handler can carry on without a database. Never shown to people."
+          },
+          "source": {
+            "default": "api",
+            "maxLength": 255,
+            "minLength": 1,
+            "type": "string"
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "title": {
+            "maxLength": 1000,
+            "minLength": 1,
+            "type": "string"
+          },
+          "userId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "channelName",
+          "title"
+        ],
+        "type": "object",
+        "description": "An event. Add actions with an id (buttons) and/or fields to ask a person something: the event then waits for an answer, returned in data.answer by this call and by GET /v1/events/{id}. Actions with a url are links and never wait. Objects inside fields and actions reject settings that don't exist. Rules the schema can't express: field and button ids are unique; submit is reserved for the Send button; requires names text or multiple-choice fields; a choice default names its options; expiresIn, callbackUrl and resume only on an event that waits; callbackUrl is https and never EmitKit itself; an event that waits can't set notify to false.",
+        "example": {
+          "channelName": "refunds",
+          "title": "Refund Jane Cooper for order #1042?",
+          "description": "Arrived damaged: 2 of 3 items broken.",
+          "fields": [
+            {
+              "id": "resolution",
+              "type": "choice",
+              "label": "Resolution",
+              "options": [
+                {
+                  "id": "full",
+                  "label": "Full refund ($240)"
+                },
+                {
+                  "id": "partial",
+                  "label": "Broken items only ($160)"
+                }
+              ],
+              "default": "partial"
+            },
+            {
+              "id": "note",
+              "type": "text",
+              "label": "Note to Jane",
+              "multiline": true
+            }
+          ],
+          "actions": [
+            {
+              "id": "approve",
+              "label": "Refund",
+              "style": "primary"
+            },
+            {
+              "id": "deny",
+              "label": "Don't refund",
+              "style": "destructive",
+              "requires": [
+                "note"
+              ]
+            },
+            {
+              "label": "Open order",
+              "url": "https://shop.example.com/admin/orders/1042"
+            }
+          ],
+          "expiresIn": 1800
+        }
+      },
+      "CreateEventResponse": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/Event"
+          },
+          "requestId": {
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+            "type": "string"
+          },
+          "success": {
+            "const": true,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "data",
+          "requestId",
+          "success"
+        ],
+        "type": "object"
+      },
+      "CreateEventServerError": {
+        "properties": {
+          "code": {
+            "const": "internal_error",
+            "description": "Stable: switch on this, not on error or message.",
+            "type": "string"
+          },
+          "error": {
+            "const": "Failed to create event",
+            "type": "string"
+          },
+          "requestId": {
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+            "type": "string"
+          },
+          "success": {
+            "const": false,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "code",
+          "error",
+          "requestId",
+          "success"
+        ],
+        "type": "object"
+      },
+      "DeleteIdentityNotFoundError": {
+        "properties": {
+          "code": {
+            "const": "not_found",
+            "description": "Stable: switch on this, not on error or message.",
+            "type": "string"
+          },
+          "error": {
+            "const": "Not found",
+            "type": "string"
+          },
+          "message": {
+            "const": "No External Identity matches the supplied user_id",
+            "type": "string"
+          },
+          "requestId": {
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+            "type": "string"
+          },
+          "success": {
+            "const": false,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "code",
+          "error",
+          "message",
+          "requestId",
+          "success"
+        ],
+        "type": "object"
+      },
+      "DeleteIdentityResponse": {
+        "properties": {
+          "data": {
+            "properties": {
+              "aliasesDeleted": {
+                "maximum": 9007199254740991,
+                "minimum": 0,
+                "type": "integer"
+              },
+              "id": {
+                "type": "string"
+              },
+              "productEventsDetached": {
+                "maximum": 9007199254740991,
+                "minimum": 0,
+                "type": "integer",
+                "description": "Always 0: events are kept, and the user is hidden when they are read."
+              },
+              "status": {
+                "enum": [
+                  "erased"
+                ],
+                "type": "string"
+              },
+              "userId": {
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "aliasesDeleted",
+              "id",
+              "productEventsDetached",
+              "status",
+              "userId"
+            ],
+            "type": "object"
+          },
+          "requestId": {
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+            "type": "string"
+          },
+          "success": {
+            "const": true,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "data",
+          "requestId",
+          "success"
+        ],
+        "type": "object"
+      },
+      "DeleteIdentityServerError": {
+        "properties": {
+          "code": {
+            "const": "internal_error",
+            "description": "Stable: switch on this, not on error or message.",
+            "type": "string"
+          },
+          "error": {
+            "const": "Failed to delete identity",
+            "type": "string"
+          },
+          "message": {
+            "const": "The identity could not be erased",
+            "type": "string"
+          },
+          "requestId": {
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+            "type": "string"
+          },
+          "success": {
+            "const": false,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "code",
+          "error",
+          "message",
+          "requestId",
+          "success"
+        ],
+        "type": "object"
+      },
+      "ForbiddenError": {
+        "properties": {
+          "code": {
+            "const": "forbidden",
+            "description": "Stable: switch on this, not on error or message.",
+            "type": "string"
+          },
+          "error": {
+            "const": "Forbidden",
+            "type": "string"
+          },
+          "message": {
+            "type": "string",
+            "description": "What's missing, e.g. the scope the operation needs."
+          },
+          "requestId": {
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+            "type": "string"
+          },
+          "success": {
+            "const": false,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "code",
+          "error",
+          "message",
+          "requestId",
+          "success"
+        ],
+        "type": "object"
+      },
+      "IdempotencyConflictError": {
+        "properties": {
+          "code": {
+            "const": "idempotency_conflict",
+            "description": "Stable: switch on this, not on error or message.",
+            "type": "string"
+          },
+          "error": {
+            "const": "Idempotency conflict",
+            "type": "string"
+          },
+          "message": {
+            "const": "This idempotency key was already used with a different request",
+            "type": "string"
+          },
+          "requestId": {
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+            "type": "string"
+          },
+          "success": {
+            "const": false,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "code",
+          "error",
+          "message",
+          "requestId",
+          "success"
+        ],
+        "type": "object"
+      },
+      "IdentifyUserRequest": {
+        "properties": {
+          "aliases": {
+            "items": {
+              "maxLength": 255,
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": "array",
+            "description": "Other ids or emails this user is known by in your events' userId"
+          },
+          "properties": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JsonValue"
+            },
+            "default": {},
+            "propertyNames": {
+              "type": "string"
+            },
+            "type": "object",
+            "description": "Merged into the identity's properties"
+          },
+          "userId": {
+            "description": "Your id for the user",
+            "minLength": 1,
+            "type": "string"
+          },
+          "user_id": {
+            "deprecated": true,
+            "description": "Deprecated: the old name of userId, still accepted in its place. If both are sent they must match.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "type": "object",
+        "required": [
+          "userId"
+        ]
+      },
+      "IdentifyUserResponse": {
+        "properties": {
+          "data": {
+            "properties": {
+              "aliases": {
+                "properties": {
+                  "created": {
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  }
+                },
+                "required": [
+                  "created"
+                ],
+                "type": "object"
+              },
+              "id": {
+                "type": "string"
+              },
+              "properties": {
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/JsonValue"
+                },
+                "propertyNames": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              "updatedAt": {
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$",
+                "type": "string"
+              },
+              "userId": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "aliases",
+              "id",
+              "properties",
+              "updatedAt",
+              "userId"
+            ],
+            "type": "object"
+          },
+          "requestId": {
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+            "type": "string"
+          },
+          "success": {
+            "const": true,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "data",
+          "requestId",
+          "success"
+        ],
+        "type": "object"
+      },
+      "IdentifyUserServerError": {
+        "properties": {
+          "code": {
+            "const": "internal_error",
+            "description": "Stable: switch on this, not on error or message.",
+            "type": "string"
+          },
+          "error": {
+            "const": "Failed to identify user",
+            "type": "string"
+          },
+          "message": {
+            "const": "The identity could not be written",
+            "type": "string"
+          },
+          "requestId": {
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+            "type": "string"
+          },
+          "success": {
+            "const": false,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "code",
+          "error",
+          "message",
+          "requestId",
+          "success"
+        ],
+        "type": "object"
+      },
+      "OpenApiDocument": {
+        "additionalProperties": {},
+        "propertyNames": {
+          "type": "string"
+        },
+        "type": "object"
+      },
+      "OpenApiServerError": {
+        "properties": {
+          "code": {
+            "const": "internal_error",
+            "description": "Stable: switch on this, not on error or message.",
+            "type": "string"
+          },
+          "error": {
+            "const": "Failed to load OpenAPI specification",
+            "type": "string"
+          },
+          "requestId": {
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+            "type": "string"
+          },
+          "success": {
+            "const": false,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "code",
+          "error",
+          "requestId",
+          "success"
+        ],
+        "type": "object"
+      },
+      "PayloadTooLargeError": {
+        "properties": {
+          "code": {
+            "const": "payload_too_large",
+            "description": "Stable: switch on this, not on error or message.",
+            "type": "string"
+          },
+          "error": {
+            "const": "Payload too large",
+            "type": "string"
+          },
+          "message": {
+            "type": "string",
+            "enum": [
+              "Request body exceeds the 1 MiB limit",
+              "Event exceeds the 16 KB storage limit"
+            ]
+          },
+          "requestId": {
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+            "type": "string"
+          },
+          "success": {
+            "const": false,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "code",
+          "error",
+          "message",
+          "requestId",
+          "success"
+        ],
+        "type": "object"
+      },
+      "RateLimitError": {
+        "properties": {
+          "code": {
+            "const": "rate_limited",
+            "description": "Stable: switch on this, not on error or message.",
+            "type": "string"
+          },
+          "error": {
+            "const": "Rate limit exceeded",
+            "type": "string"
+          },
+          "message": {
+            "const": "Too many requests. Please try again later.",
+            "type": "string"
+          },
+          "requestId": {
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+            "type": "string"
+          },
+          "success": {
+            "const": false,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "code",
+          "error",
+          "message",
+          "requestId",
+          "success"
+        ],
+        "type": "object"
+      },
+      "UnauthorizedError": {
+        "properties": {
+          "code": {
+            "const": "unauthorized",
+            "description": "Stable: switch on this, not on error or message.",
+            "type": "string"
+          },
+          "error": {
+            "const": "Unauthorized",
+            "type": "string"
+          },
+          "message": {
+            "const": "Invalid or missing authentication credentials",
+            "type": "string"
+          },
+          "requestId": {
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+            "type": "string"
+          },
+          "success": {
+            "const": false,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "code",
+          "error",
+          "message",
+          "requestId",
+          "success"
+        ],
+        "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "code": {
+            "const": "validation_error",
+            "description": "Stable: switch on this, not on error or message.",
+            "type": "string"
+          },
+          "details": {
+            "items": {
+              "properties": {
+                "code": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "message": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "path": {
+                  "items": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "maximum": 9007199254740991,
+                        "minimum": -9007199254740991,
+                        "type": "integer"
+                      }
+                    ]
+                  },
+                  "type": "array"
+                }
+              },
+              "required": [
+                "message",
+                "path"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "error": {
+            "const": "Validation error",
+            "type": "string"
+          },
+          "requestId": {
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+            "type": "string"
+          },
+          "success": {
+            "const": false,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "code",
+          "details",
+          "error",
+          "requestId",
+          "success"
+        ],
+        "type": "object"
+      },
+      "Answer": {
+        "description": "The answer to an event that waits: pending until someone presses a button, then answered; expired after expiresAt; canceled by the sender. First answer wins. action, values, by and at are null until it's answered.",
+        "properties": {
+          "action": {
+            "description": "The id of the pressed button (submit when fields had no buttons).",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When it was answered."
+          },
+          "by": {
+            "anyOf": [
+              {
+                "properties": {
+                  "email": {
+                    "type": "string"
+                  },
+                  "id": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "email",
+                  "id",
+                  "name"
+                ],
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Who answered (an organization member)."
+          },
+          "expiresAt": {
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$",
+            "type": "string",
+            "description": "When a pending event stops waiting."
+          },
+          "status": {
+            "enum": [
+              "pending",
+              "answered",
+              "expired",
+              "canceled"
+            ],
+            "type": "string"
+          },
+          "url": {
+            "description": "The answer page (needs a signed-in member). Pushes for this event open it.",
+            "format": "uri",
+            "type": "string"
+          },
+          "values": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    }
+                  ]
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Field values by field id: an option id (an array for multiple), text, a number or a boolean. Empty text fields are left out."
+          }
+        },
+        "required": [
+          "action",
+          "at",
+          "by",
+          "expiresAt",
+          "status",
+          "url",
+          "values"
+        ],
+        "type": "object"
+      },
+      "Event": {
+        "description": "An event, as createEvent, getEvent and cancelEvent return it: the event with its fields, actions (both [] when none) and answer (null when it doesn't wait). Events are kept for 90 days; after that getEvent returns 404.",
+        "properties": {
+          "actions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z0-9_-]{1,64}$",
+                  "description": "A button: what the answer reports, e.g. approve"
+                },
+                "label": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 40
+                },
+                "requires": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9_-]{1,64}$"
+                  },
+                  "description": "Field ids that must be filled in before this button can be pressed."
+                },
+                "style": {
+                  "type": "string",
+                  "enum": [
+                    "primary",
+                    "destructive"
+                  ]
+                },
+                "url": {
+                  "type": "string",
+                  "pattern": "^(?:https:\\/\\/|http:\\/\\/localhost[:/])\\S+$",
+                  "maxLength": 2000,
+                  "description": "A link: the page it opens"
+                }
+              },
+              "required": [
+                "label"
+              ],
+              "additionalProperties": true
+            },
+            "maxItems": 4,
+            "description": "The event's buttons and links ([] when none)."
+          },
+          "answer": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Answer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "null when the event doesn't wait for an answer."
+          },
+          "callback": {
+            "anyOf": [
+              {
+                "properties": {
+                  "attempts": {
+                    "type": "integer"
+                  },
+                  "deliveredAt": {
+                    "anyOf": [
+                      {
+                        "format": "date-time",
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "When a 2xx was received."
+                  },
+                  "lastStatus": {
+                    "description": "The receiver's last HTTP status; null when it couldn't be reached.",
+                    "type": [
+                      "integer",
+                      "null"
+                    ]
+                  },
+                  "url": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "attempts",
+                  "deliveredAt",
+                  "lastStatus",
+                  "url"
+                ],
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "How delivery to callbackUrl went; null without one."
+          },
+          "channelId": {
+            "type": "string"
+          },
+          "channelName": {
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$",
+            "type": "string"
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "displayAs": {
+            "enum": [
+              "message",
+              "notification"
+            ],
+            "type": "string"
+          },
+          "fields": {
+            "type": "array",
+            "items": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "default": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "pattern": "^[A-Za-z0-9_-]{1,64}$"
+                        },
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "pattern": "^[A-Za-z0-9_-]{1,64}$"
+                          }
+                        }
+                      ],
+                      "description": "An option id (an array of ids when multiple). A single choice without one starts on its first option."
+                    },
+                    "id": {
+                      "type": "string",
+                      "pattern": "^[A-Za-z0-9_-]{1,64}$"
+                    },
+                    "label": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 100
+                    },
+                    "multiple": {
+                      "type": "boolean",
+                      "description": "Let the person pick several options (checkboxes)."
+                    },
+                    "options": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "pattern": "^[A-Za-z0-9_-]{1,64}$",
+                            "description": "What the answer reports, e.g. partial"
+                          },
+                          "label": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 100,
+                            "description": "What the person sees"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "label"
+                        ],
+                        "additionalProperties": true
+                      },
+                      "minItems": 2,
+                      "maxItems": 10
+                    },
+                    "type": {
+                      "type": "string",
+                      "enum": [
+                        "choice"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "label",
+                    "options",
+                    "type"
+                  ],
+                  "additionalProperties": true
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "default": {
+                      "type": "string",
+                      "minLength": 0,
+                      "maxLength": 2000
+                    },
+                    "id": {
+                      "type": "string",
+                      "pattern": "^[A-Za-z0-9_-]{1,64}$"
+                    },
+                    "label": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 100
+                    },
+                    "maxLength": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 2000
+                    },
+                    "multiline": {
+                      "type": "boolean"
+                    },
+                    "placeholder": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 100
+                    },
+                    "type": {
+                      "type": "string",
+                      "enum": [
+                        "text"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "label",
+                    "type"
+                  ],
+                  "additionalProperties": true
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "default": {
+                      "type": "number"
+                    },
+                    "id": {
+                      "type": "string",
+                      "pattern": "^[A-Za-z0-9_-]{1,64}$"
+                    },
+                    "label": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 100
+                    },
+                    "max": {
+                      "type": "number"
+                    },
+                    "min": {
+                      "type": "number"
+                    },
+                    "step": {
+                      "type": "number",
+                      "exclusiveMinimum": 0
+                    },
+                    "type": {
+                      "type": "string",
+                      "enum": [
+                        "number"
+                      ]
+                    },
+                    "unit": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 8,
+                      "description": "Shown next to the value, e.g. $ or %"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "label",
+                    "type"
+                  ],
+                  "additionalProperties": true
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "default": {
+                      "type": "boolean"
+                    },
+                    "id": {
+                      "type": "string",
+                      "pattern": "^[A-Za-z0-9_-]{1,64}$"
+                    },
+                    "label": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 100
+                    },
+                    "type": {
+                      "type": "string",
+                      "enum": [
+                        "boolean"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "label",
+                    "type"
+                  ],
+                  "additionalProperties": true
+                }
+              ]
+            },
+            "maxItems": 5,
+            "description": "The event's fields ([] when none)."
+          },
+          "icon": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "id": {
+            "type": "string"
+          },
+          "metadata": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "notify": {
+            "type": "boolean"
+          },
+          "resume": {
+            "description": "The resume you sent, as is (null without one).",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "source": {
+            "type": "string"
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "title": {
+            "type": "string"
+          },
+          "userId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "actions",
+          "answer",
+          "callback",
+          "channelId",
+          "channelName",
+          "createdAt",
+          "description",
+          "displayAs",
+          "fields",
+          "icon",
+          "id",
+          "metadata",
+          "notify",
+          "resume",
+          "source",
+          "tags",
+          "title",
+          "userId"
+        ],
+        "type": "object"
+      },
+      "EventResponse": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/Event"
+          },
+          "requestId": {
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+            "type": "string"
+          },
+          "success": {
+            "const": true,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "data",
+          "requestId",
+          "success"
+        ],
+        "type": "object",
+        "example": {
+          "success": true,
+          "requestId": "5f0c6b1e-2d3a-4f5b-8c9d-0e1f2a3b4c5d",
+          "data": {
+            "id": "event_…",
+            "channelId": "channel_…",
+            "channelName": "refunds",
+            "title": "Refund Jane Cooper for order #1042?",
+            "description": "Arrived damaged: 2 of 3 items broken.",
+            "icon": null,
+            "createdAt": "2026-09-26T10:00:00.000Z",
+            "displayAs": "message",
+            "metadata": {},
+            "notify": true,
+            "source": "api",
+            "tags": [],
+            "userId": null,
+            "fields": [
+              {
+                "id": "resolution",
+                "type": "choice",
+                "label": "Resolution",
+                "options": [
+                  {
+                    "id": "full",
+                    "label": "Full refund ($240)"
+                  },
+                  {
+                    "id": "partial",
+                    "label": "Broken items only ($160)"
+                  }
+                ],
+                "default": "partial"
+              },
+              {
+                "id": "note",
+                "type": "text",
+                "label": "Note to Jane",
+                "multiline": true
+              }
+            ],
+            "actions": [
+              {
+                "id": "approve",
+                "label": "Refund",
+                "style": "primary"
+              },
+              {
+                "id": "deny",
+                "label": "Don't refund",
+                "style": "destructive",
+                "requires": [
+                  "note"
+                ]
+              },
+              {
+                "label": "Open order",
+                "url": "https://shop.example.com/admin/orders/1042"
+              }
+            ],
+            "answer": {
+              "action": "approve",
+              "at": "2026-09-26T10:04:12.000Z",
+              "by": {
+                "email": "chris@example.com",
+                "id": "user_…",
+                "name": "Chris"
+              },
+              "expiresAt": "2026-09-26T10:30:00.000Z",
+              "status": "answered",
+              "url": "https://app.emitkit.com/a/event_…",
+              "values": {
+                "resolution": "partial"
+              }
+            },
+            "callback": {
+              "attempts": 1,
+              "deliveredAt": "2026-09-26T10:04:13.000Z",
+              "lastStatus": 200,
+              "url": "https://shop.example.com/api/emitkit"
+            },
+            "resume": "refund-job-1042"
+          }
+        }
+      },
+      "EventNotFoundError": {
+        "properties": {
+          "code": {
+            "const": "not_found",
+            "type": "string"
+          },
+          "error": {
+            "const": "Not found",
+            "type": "string"
+          },
+          "message": {
+            "const": "No event with this id in the API key's project (events are kept for 90 days)",
+            "type": "string"
+          },
+          "requestId": {
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+            "type": "string"
+          },
+          "success": {
+            "const": false,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "code",
+          "error",
+          "message",
+          "requestId",
+          "success"
+        ],
+        "type": "object"
+      },
+      "NotPendingError": {
+        "properties": {
+          "code": {
+            "const": "not_pending",
+            "type": "string"
+          },
+          "error": {
+            "const": "Not pending",
+            "type": "string"
+          },
+          "message": {
+            "type": "string",
+            "description": "What happened to it: who answered it, or that it expired."
+          },
+          "requestId": {
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+            "type": "string"
+          },
+          "success": {
+            "const": false,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "code",
+          "error",
+          "message",
+          "requestId",
+          "success"
+        ],
+        "type": "object"
+      },
+      "GetEventServerError": {
+        "properties": {
+          "code": {
+            "const": "internal_error",
+            "type": "string"
+          },
+          "error": {
+            "const": "Failed to read event",
+            "type": "string"
+          },
+          "requestId": {
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+            "type": "string"
+          },
+          "success": {
+            "const": false,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "code",
+          "error",
+          "requestId",
+          "success"
+        ],
+        "type": "object"
+      },
+      "CancelEventServerError": {
+        "properties": {
+          "code": {
+            "const": "internal_error",
+            "type": "string"
+          },
+          "error": {
+            "const": "Failed to cancel event",
+            "type": "string"
+          },
+          "requestId": {
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+            "type": "string"
+          },
+          "success": {
+            "const": false,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "code",
+          "error",
+          "requestId",
+          "success"
+        ],
+        "type": "object"
+      },
+      "NotWaitingError": {
+        "properties": {
+          "code": {
+            "const": "not_waiting",
+            "type": "string"
+          },
+          "error": {
+            "const": "Not waiting",
+            "type": "string"
+          },
+          "message": {
+            "type": "string",
+            "description": "The event doesn't wait for an answer, so there is nothing to cancel."
+          },
+          "requestId": {
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+            "type": "string"
+          },
+          "success": {
+            "const": false,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "code",
+          "error",
+          "message",
+          "requestId",
+          "success"
+        ],
+        "type": "object"
+      },
+      "CallbackPayload": {
+        "description": "What EmitKit POSTs to callbackUrl, signed the Standard Webhooks way (webhook-id, webhook-timestamp, webhook-signature headers) with the project's callback signing secret.",
+        "properties": {
+          "answer": {
+            "$ref": "#/components/schemas/Answer"
+          },
+          "eventId": {
+            "type": "string"
+          },
+          "resume": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "type": {
+            "enum": [
+              "event.answered",
+              "event.expired"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "answer",
+          "eventId",
+          "resume",
+          "type"
+        ],
+        "type": "object"
+      },
+      "Channel": {
+        "properties": {
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "icon": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "An emoji"
+          },
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string",
+            "description": "What events use as channelName"
+          }
+        },
+        "required": [
+          "createdAt",
+          "description",
+          "icon",
+          "id",
+          "name"
+        ],
+        "type": "object"
+      },
+      "EventListResponse": {
+        "properties": {
+          "data": {
+            "properties": {
+              "events": {
+                "items": {
+                  "$ref": "#/components/schemas/Event"
+                },
+                "type": "array",
+                "description": "Newest first."
+              },
+              "nextCursor": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "Pass as before for the next page; null on the last page. Opaque: don't parse it."
+              }
+            },
+            "required": [
+              "events",
+              "nextCursor"
+            ],
+            "type": "object"
+          },
+          "requestId": {
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+            "type": "string"
+          },
+          "success": {
+            "const": true,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "data",
+          "requestId",
+          "success"
+        ],
+        "type": "object"
+      },
+      "ChannelListResponse": {
+        "properties": {
+          "data": {
+            "properties": {
+              "channels": {
+                "items": {
+                  "$ref": "#/components/schemas/Channel"
+                },
+                "type": "array",
+                "description": "By name."
+              }
+            },
+            "required": [
+              "channels"
+            ],
+            "type": "object"
+          },
+          "requestId": {
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+            "type": "string"
+          },
+          "success": {
+            "const": true,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "data",
+          "requestId",
+          "success"
+        ],
+        "type": "object"
+      },
+      "MeResponse": {
+        "properties": {
+          "data": {
+            "properties": {
+              "organization": {
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "id",
+                  "name"
+                ],
+                "type": "object"
+              },
+              "project": {
+                "description": "Where the credential's events go; null for a key without a live project.",
+                "oneOf": [
+                  {
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "name"
+                    ],
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "scopes": {
+                "items": {
+                  "enum": [
+                    "events:write",
+                    "events:read",
+                    "identities:write"
+                  ],
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "via": {
+                "const": "api_key",
+                "type": "string",
+                "description": "The kind of credential."
+              }
+            },
+            "required": [
+              "organization",
+              "project",
+              "scopes",
+              "via"
+            ],
+            "type": "object"
+          },
+          "requestId": {
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+            "type": "string"
+          },
+          "success": {
+            "const": true,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "data",
+          "requestId",
+          "success"
+        ],
+        "type": "object"
+      },
+      "ListEventsServerError": {
+        "properties": {
+          "code": {
+            "const": "internal_error",
+            "type": "string"
+          },
+          "error": {
+            "const": "Failed to list events",
+            "type": "string"
+          },
+          "requestId": {
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+            "type": "string"
+          },
+          "success": {
+            "const": false,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "code",
+          "error",
+          "requestId",
+          "success"
+        ],
+        "type": "object"
+      },
+      "ListChannelsServerError": {
+        "properties": {
+          "code": {
+            "const": "internal_error",
+            "type": "string"
+          },
+          "error": {
+            "const": "Failed to list channels",
+            "type": "string"
+          },
+          "requestId": {
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+            "type": "string"
+          },
+          "success": {
+            "const": false,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "code",
+          "error",
+          "requestId",
+          "success"
+        ],
+        "type": "object"
+      },
+      "MeServerError": {
+        "properties": {
+          "code": {
+            "const": "internal_error",
+            "type": "string"
+          },
+          "error": {
+            "const": "Failed to read the credential",
+            "type": "string"
+          },
+          "requestId": {
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+            "type": "string"
+          },
+          "success": {
+            "const": false,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "code",
+          "error",
+          "requestId",
+          "success"
+        ],
+        "type": "object"
+      },
+      "JsonValue": {
+        "description": "Any JSON value."
+      }
+    },
+    "securitySchemes": {
+      "apiKeyBearer": {
+        "bearerFormat": "EmitKit API key",
+        "description": "EmitKit API key in the Authorization header as Bearer emitkit_…",
+        "scheme": "bearer",
+        "type": "http"
+      },
+      "apiKeyHeader": {
+        "description": "EmitKit API key beginning with emitkit_.",
+        "in": "header",
+        "name": "X-API-Key",
+        "type": "apiKey"
+      }
+    }
+  },
+  "info": {
+    "description": "Create Events, ask people for decisions (an Event with buttons or fields waits for an answer), and maintain Organization-scoped identities. Operations authenticate with an EmitKit API key (`emitkit_…`) sent as `Authorization: Bearer <key>` or `X-API-Key: <key>`. The same operations are available as MCP tools at `https://api.emitkit.com/mcp`.",
+    "title": "EmitKit API",
+    "version": "1.0.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/v1/me": {
+      "get": {
+        "description": "Who the credential is: its organization, the Project its events go to, and its scopes. Works with any valid credential; use it to check a key.",
+        "operationId": "me",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeResponse"
+                }
+              }
+            },
+            "description": "The credential.",
+            "headers": {
+              "X-RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimitLimit"
+              },
+              "X-RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimitRemaining"
+              },
+              "X-RateLimit-Reset": {
+                "$ref": "#/components/headers/RateLimitReset"
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedError"
+                }
+              }
+            },
+            "description": "Authentication credentials are missing or invalid.",
+            "headers": {
+              "WWW-Authenticate": {
+                "$ref": "#/components/headers/WwwAuthenticate"
+              }
+            }
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitError"
+                }
+              }
+            },
+            "description": "The authenticated principal exceeded its rate limit.",
+            "headers": {
+              "Retry-After": {
+                "$ref": "#/components/headers/RetryAfter"
+              },
+              "X-RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimitLimit"
+              },
+              "X-RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimitRemaining"
+              },
+              "X-RateLimit-Reset": {
+                "$ref": "#/components/headers/RateLimitReset"
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeServerError"
+                }
+              }
+            },
+            "description": "Unexpected server error."
+          }
+        },
+        "security": [
+          {
+            "apiKeyBearer": []
+          },
+          {
+            "apiKeyHeader": []
+          }
+        ],
+        "summary": "Check a credential",
+        "tags": [
+          "Events"
+        ],
+        "x-emitkit-idempotency": {
+          "mode": "none"
+        },
+        "x-emitkit-mcp": {
+          "exposed": false
+        },
+        "x-emitkit-permission": null
+      }
+    },
+    "/v1/events": {
+      "post": {
+        "description": "Creates an Event in a named Channel, creating the Channel when necessary. When notify is true (the default), Organization members who turned on notifications for the Channel receive a web push notification. Events are retained for 90 days. Add actions with an id (buttons) or fields to ask a person something: the event waits for an answer (data.answer), which you read with GET /v1/events/{id}.",
+        "operationId": "createEvent",
+        "parameters": [
+          {
+            "description": "A caller-generated command identifier, scoped to the API key and kept for 24 hours. Reusing it with the same request replays the first response; reusing it with a different request, or while the first request is still running, returns 409.",
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "description": "A caller-generated key that identifies one event command.",
+              "maxLength": 255,
+              "minLength": 1,
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateEventRequest"
+              },
+              "example": {
+                "channelName": "refunds",
+                "title": "Refund Jane Cooper for order #1042?",
+                "description": "Arrived damaged: 2 of 3 items broken.",
+                "fields": [
+                  {
+                    "id": "resolution",
+                    "type": "choice",
+                    "label": "Resolution",
+                    "options": [
+                      {
+                        "id": "full",
+                        "label": "Full refund ($240)"
+                      },
+                      {
+                        "id": "partial",
+                        "label": "Broken items only ($160)"
+                      }
+                    ],
+                    "default": "partial"
+                  },
+                  {
+                    "id": "note",
+                    "type": "text",
+                    "label": "Note to Jane",
+                    "multiline": true
+                  }
+                ],
+                "actions": [
+                  {
+                    "id": "approve",
+                    "label": "Refund",
+                    "style": "primary"
+                  },
+                  {
+                    "id": "deny",
+                    "label": "Don't refund",
+                    "style": "destructive",
+                    "requires": [
+                      "note"
+                    ]
+                  },
+                  {
+                    "label": "Open order",
+                    "url": "https://shop.example.com/admin/orders/1042"
+                  }
+                ],
+                "expiresIn": 1800
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateEventResponse"
+                }
+              }
+            },
+            "description": "The Event was created or an earlier response was replayed.",
+            "headers": {
+              "X-Idempotent-Replay": {
+                "$ref": "#/components/headers/IdempotentReplay"
+              },
+              "X-RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimitLimit"
+              },
+              "X-RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimitRemaining"
+              },
+              "X-RateLimit-Reset": {
+                "$ref": "#/components/headers/RateLimitReset"
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                }
+              }
+            },
+            "description": "The request does not match the operation contract.",
+            "headers": {
+              "X-RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimitLimit"
+              },
+              "X-RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimitRemaining"
+              },
+              "X-RateLimit-Reset": {
+                "$ref": "#/components/headers/RateLimitReset"
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedError"
+                }
+              }
+            },
+            "description": "Authentication credentials are missing or invalid.",
+            "headers": {
+              "WWW-Authenticate": {
+                "$ref": "#/components/headers/WwwAuthenticate"
+              }
+            }
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenError"
+                }
+              }
+            },
+            "description": "The API key lacks this operation's scope (a read-only key can only read), isn't bound to a Project, or its Project was deleted.",
+            "headers": {
+              "X-RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimitLimit"
+              },
+              "X-RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimitRemaining"
+              },
+              "X-RateLimit-Reset": {
+                "$ref": "#/components/headers/RateLimitReset"
+              }
+            }
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IdempotencyConflictError"
+                }
+              }
+            },
+            "description": "The Idempotency-Key belongs to a different event request.",
+            "headers": {
+              "X-RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimitLimit"
+              },
+              "X-RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimitRemaining"
+              },
+              "X-RateLimit-Reset": {
+                "$ref": "#/components/headers/RateLimitReset"
+              }
+            }
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PayloadTooLargeError"
+                }
+              }
+            },
+            "description": "The request body exceeds 1 MiB, or the stored Event would exceed the 16 KB limit (all of its stored fields, including metadata, combined)."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitError"
+                }
+              }
+            },
+            "description": "The authenticated principal exceeded its rate limit.",
+            "headers": {
+              "Retry-After": {
+                "$ref": "#/components/headers/RetryAfter"
+              },
+              "X-RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimitLimit"
+              },
+              "X-RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimitRemaining"
+              },
+              "X-RateLimit-Reset": {
+                "$ref": "#/components/headers/RateLimitReset"
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateEventServerError"
+                }
+              }
+            },
+            "description": "The Event could not be created.",
+            "headers": {
+              "X-RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimitLimit"
+              },
+              "X-RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimitRemaining"
+              },
+              "X-RateLimit-Reset": {
+                "$ref": "#/components/headers/RateLimitReset"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "apiKeyBearer": []
+          },
+          {
+            "apiKeyHeader": []
+          }
+        ],
+        "summary": "Create Event",
+        "tags": [
+          "Events"
+        ],
+        "x-emitkit-idempotency": {
+          "conflictStatus": 409,
+          "expiresAfterSeconds": 86400,
+          "mcpInput": "idempotencyKey",
+          "mode": "keyed",
+          "replayResponseHeader": "X-Idempotent-Replay",
+          "required": false,
+          "restHeader": "Idempotency-Key"
+        },
+        "x-emitkit-mcp": {
+          "annotations": {
+            "destructiveHint": false,
+            "idempotentHint": false,
+            "readOnlyHint": false
+          },
+          "exposed": true,
+          "name": "createEvent",
+          "title": "Create Event"
+        },
+        "x-emitkit-permission": "events:create"
+      },
+      "get": {
+        "description": "The Project's events, newest first, each with its fields, actions and answer (as getEvent returns it). Page with before: pass the previous page's nextCursor (an opaque position; a time works too). Times are ISO 8601 with their zone. Unknown parameters are refused. Deleted events and events in deleted channels are left out.",
+        "operationId": "listEvents",
+        "parameters": [
+          {
+            "description": "Only events before this point: the previous page's nextCursor, or a time",
+            "in": "query",
+            "name": "before",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Only this channel (its name)",
+            "in": "query",
+            "name": "channel",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255
+            }
+          },
+          {
+            "description": "Events per page: 1 to 100, default 50",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          {
+            "description": "Only events at or after this time",
+            "in": "query",
+            "name": "since",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventListResponse"
+                }
+              }
+            },
+            "description": "A page of events.",
+            "headers": {
+              "X-RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimitLimit"
+              },
+              "X-RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimitRemaining"
+              },
+              "X-RateLimit-Reset": {
+                "$ref": "#/components/headers/RateLimitReset"
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                }
+              }
+            },
+            "description": "The request does not match the operation contract.",
+            "headers": {
+              "X-RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimitLimit"
+              },
+              "X-RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimitRemaining"
+              },
+              "X-RateLimit-Reset": {
+                "$ref": "#/components/headers/RateLimitReset"
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedError"
+                }
+              }
+            },
+            "description": "Authentication credentials are missing or invalid.",
+            "headers": {
+              "WWW-Authenticate": {
+                "$ref": "#/components/headers/WwwAuthenticate"
+              }
+            }
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenError"
+                }
+              }
+            },
+            "description": "The API key lacks this operation's scope (a read-only key can only read), isn't bound to a Project, or its Project was deleted.",
+            "headers": {
+              "X-RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimitLimit"
+              },
+              "X-RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimitRemaining"
+              },
+              "X-RateLimit-Reset": {
+                "$ref": "#/components/headers/RateLimitReset"
+              }
+            }
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitError"
+                }
+              }
+            },
+            "description": "The authenticated principal exceeded its rate limit.",
+            "headers": {
+              "Retry-After": {
+                "$ref": "#/components/headers/RetryAfter"
+              },
+              "X-RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimitLimit"
+              },
+              "X-RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimitRemaining"
+              },
+              "X-RateLimit-Reset": {
+                "$ref": "#/components/headers/RateLimitReset"
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListEventsServerError"
+                }
+              }
+            },
+            "description": "Unexpected server error."
+          }
+        },
+        "security": [
+          {
+            "apiKeyBearer": []
+          },
+          {
+            "apiKeyHeader": []
+          }
+        ],
+        "summary": "List events",
+        "tags": [
+          "Events"
+        ],
+        "x-emitkit-idempotency": {
+          "mode": "none"
+        },
+        "x-emitkit-mcp": {
+          "annotations": {
+            "destructiveHint": false,
+            "idempotentHint": true,
+            "readOnlyHint": true
+          },
+          "exposed": true,
+          "name": "listEvents",
+          "title": "List Events"
+        },
+        "x-emitkit-permission": "events:read"
+      }
+    },
+    "/v1/events/{id}": {
+      "get": {
+        "description": "Reads an event back by id, with its fields, actions and answer. Poll this to learn whether an event that waits was answered: answer.status is pending, answered, expired or canceled; once answered, answer.action is the pressed button's id and answer.values holds the fields by id. Polling every few seconds is fine: the rate limit is 100 requests per minute per API key, in fixed 60-second windows.",
+        "operationId": "getEvent",
+        "parameters": [
+          {
+            "description": "The event id from createEvent (data.id).",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventResponse"
+                }
+              }
+            },
+            "description": "The event.",
+            "headers": {
+              "X-RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimitLimit"
+              },
+              "X-RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimitRemaining"
+              },
+              "X-RateLimit-Reset": {
+                "$ref": "#/components/headers/RateLimitReset"
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedError"
+                }
+              }
+            },
+            "description": "Authentication credentials are missing or invalid.",
+            "headers": {
+              "WWW-Authenticate": {
+                "$ref": "#/components/headers/WwwAuthenticate"
+              }
+            }
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenError"
+                }
+              }
+            },
+            "description": "The API key lacks this operation's scope (a read-only key can only read), isn't bound to a Project, or its Project was deleted.",
+            "headers": {
+              "X-RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimitLimit"
+              },
+              "X-RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimitRemaining"
+              },
+              "X-RateLimit-Reset": {
+                "$ref": "#/components/headers/RateLimitReset"
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventNotFoundError"
+                }
+              }
+            },
+            "description": "No event with this id in the API key's Project.",
+            "headers": {
+              "X-RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimitLimit"
+              },
+              "X-RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimitRemaining"
+              },
+              "X-RateLimit-Reset": {
+                "$ref": "#/components/headers/RateLimitReset"
+              }
+            }
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitError"
+                }
+              }
+            },
+            "description": "The authenticated principal exceeded its rate limit.",
+            "headers": {
+              "Retry-After": {
+                "$ref": "#/components/headers/RetryAfter"
+              },
+              "X-RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimitLimit"
+              },
+              "X-RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimitRemaining"
+              },
+              "X-RateLimit-Reset": {
+                "$ref": "#/components/headers/RateLimitReset"
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetEventServerError"
+                }
+              }
+            },
+            "description": "The event could not be read.",
+            "headers": {
+              "X-RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimitLimit"
+              },
+              "X-RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimitRemaining"
+              },
+              "X-RateLimit-Reset": {
+                "$ref": "#/components/headers/RateLimitReset"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "apiKeyBearer": []
+          },
+          {
+            "apiKeyHeader": []
+          }
+        ],
+        "summary": "Get an event",
+        "tags": [
+          "Events"
+        ],
+        "x-emitkit-idempotency": {
+          "mode": "none"
+        },
+        "x-emitkit-mcp": {
+          "annotations": {
+            "destructiveHint": false,
+            "idempotentHint": true,
+            "readOnlyHint": true
+          },
+          "exposed": true,
+          "name": "getEvent",
+          "title": "Get Event"
+        },
+        "x-emitkit-permission": "events:read"
+      }
+    },
+    "/v1/events/{id}/cancel": {
+      "post": {
+        "description": "Stops a pending event from waiting when the answer is no longer needed; the answer page then shows it as no longer needed. Canceling an already canceled event returns it again, so retries are safe.",
+        "operationId": "cancelEvent",
+        "parameters": [
+          {
+            "description": "The event id from createEvent (data.id).",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventResponse"
+                }
+              }
+            },
+            "description": "The event, now canceled.",
+            "headers": {
+              "X-RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimitLimit"
+              },
+              "X-RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimitRemaining"
+              },
+              "X-RateLimit-Reset": {
+                "$ref": "#/components/headers/RateLimitReset"
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedError"
+                }
+              }
+            },
+            "description": "Authentication credentials are missing or invalid.",
+            "headers": {
+              "WWW-Authenticate": {
+                "$ref": "#/components/headers/WwwAuthenticate"
+              }
+            }
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenError"
+                }
+              }
+            },
+            "description": "The API key lacks this operation's scope (a read-only key can only read), isn't bound to a Project, or its Project was deleted.",
+            "headers": {
+              "X-RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimitLimit"
+              },
+              "X-RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimitRemaining"
+              },
+              "X-RateLimit-Reset": {
+                "$ref": "#/components/headers/RateLimitReset"
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventNotFoundError"
+                }
+              }
+            },
+            "description": "No event with this id in the API key's Project.",
+            "headers": {
+              "X-RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimitLimit"
+              },
+              "X-RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimitRemaining"
+              },
+              "X-RateLimit-Reset": {
+                "$ref": "#/components/headers/RateLimitReset"
+              }
+            }
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/NotPendingError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/NotWaitingError"
+                    }
+                  ]
+                }
+              }
+            },
+            "description": "not_pending: it was answered or expired. not_waiting: the event doesn't ask anything.",
+            "headers": {
+              "X-RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimitLimit"
+              },
+              "X-RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimitRemaining"
+              },
+              "X-RateLimit-Reset": {
+                "$ref": "#/components/headers/RateLimitReset"
+              }
+            }
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitError"
+                }
+              }
+            },
+            "description": "The authenticated principal exceeded its rate limit.",
+            "headers": {
+              "Retry-After": {
+                "$ref": "#/components/headers/RetryAfter"
+              },
+              "X-RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimitLimit"
+              },
+              "X-RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimitRemaining"
+              },
+              "X-RateLimit-Reset": {
+                "$ref": "#/components/headers/RateLimitReset"
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CancelEventServerError"
+                }
+              }
+            },
+            "description": "The event could not be canceled.",
+            "headers": {
+              "X-RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimitLimit"
+              },
+              "X-RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimitRemaining"
+              },
+              "X-RateLimit-Reset": {
+                "$ref": "#/components/headers/RateLimitReset"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "apiKeyBearer": []
+          },
+          {
+            "apiKeyHeader": []
+          }
+        ],
+        "summary": "Cancel an event that waits",
+        "tags": [
+          "Events"
+        ],
+        "x-emitkit-idempotency": {
+          "mode": "none"
+        },
+        "x-emitkit-mcp": {
+          "annotations": {
+            "destructiveHint": false,
+            "idempotentHint": false,
+            "readOnlyHint": false
+          },
+          "exposed": true,
+          "name": "cancelEvent",
+          "title": "Cancel Event"
+        },
+        "x-emitkit-permission": "events:create"
+      }
+    },
+    "/v1/channels": {
+      "get": {
+        "description": "The Project's channels, by name. Events create channels on first use, so this is where to find the names already in use.",
+        "operationId": "listChannels",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChannelListResponse"
+                }
+              }
+            },
+            "description": "The channels.",
+            "headers": {
+              "X-RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimitLimit"
+              },
+              "X-RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimitRemaining"
+              },
+              "X-RateLimit-Reset": {
+                "$ref": "#/components/headers/RateLimitReset"
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedError"
+                }
+              }
+            },
+            "description": "Authentication credentials are missing or invalid.",
+            "headers": {
+              "WWW-Authenticate": {
+                "$ref": "#/components/headers/WwwAuthenticate"
+              }
+            }
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenError"
+                }
+              }
+            },
+            "description": "The API key lacks this operation's scope (a read-only key can only read), isn't bound to a Project, or its Project was deleted.",
+            "headers": {
+              "X-RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimitLimit"
+              },
+              "X-RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimitRemaining"
+              },
+              "X-RateLimit-Reset": {
+                "$ref": "#/components/headers/RateLimitReset"
+              }
+            }
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitError"
+                }
+              }
+            },
+            "description": "The authenticated principal exceeded its rate limit.",
+            "headers": {
+              "Retry-After": {
+                "$ref": "#/components/headers/RetryAfter"
+              },
+              "X-RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimitLimit"
+              },
+              "X-RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimitRemaining"
+              },
+              "X-RateLimit-Reset": {
+                "$ref": "#/components/headers/RateLimitReset"
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListChannelsServerError"
+                }
+              }
+            },
+            "description": "Unexpected server error."
+          }
+        },
+        "security": [
+          {
+            "apiKeyBearer": []
+          },
+          {
+            "apiKeyHeader": []
+          }
+        ],
+        "summary": "List channels",
+        "tags": [
+          "Events"
+        ],
+        "x-emitkit-idempotency": {
+          "mode": "none"
+        },
+        "x-emitkit-mcp": {
+          "annotations": {
+            "destructiveHint": false,
+            "idempotentHint": true,
+            "readOnlyHint": true
+          },
+          "exposed": true,
+          "name": "listChannels",
+          "title": "List Channels"
+        },
+        "x-emitkit-permission": "events:read"
+      }
+    },
+    "/v1/identify": {
+      "post": {
+        "description": "Creates or updates the Organization-scoped identity for userId (user_id is its old name and still works). Properties are merged into the stored ones (new values replace old ones; keys you leave out are kept), and each alias moves to this identity.",
+        "operationId": "identifyUser",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IdentifyUserRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IdentifyUserResponse"
+                }
+              }
+            },
+            "description": "The identity was created or updated.",
+            "headers": {
+              "X-RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimitLimit"
+              },
+              "X-RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimitRemaining"
+              },
+              "X-RateLimit-Reset": {
+                "$ref": "#/components/headers/RateLimitReset"
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                }
+              }
+            },
+            "description": "The request does not match the operation contract.",
+            "headers": {
+              "X-RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimitLimit"
+              },
+              "X-RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimitRemaining"
+              },
+              "X-RateLimit-Reset": {
+                "$ref": "#/components/headers/RateLimitReset"
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedError"
+                }
+              }
+            },
+            "description": "Authentication credentials are missing or invalid.",
+            "headers": {
+              "WWW-Authenticate": {
+                "$ref": "#/components/headers/WwwAuthenticate"
+              }
+            }
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenError"
+                }
+              }
+            },
+            "description": "The API key lacks this operation's scope (a read-only key can only read), isn't bound to a Project, or its Project was deleted.",
+            "headers": {
+              "X-RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimitLimit"
+              },
+              "X-RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimitRemaining"
+              },
+              "X-RateLimit-Reset": {
+                "$ref": "#/components/headers/RateLimitReset"
+              }
+            }
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PayloadTooLargeError"
+                }
+              }
+            },
+            "description": "The request body exceeds the public API's 1 MiB limit."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitError"
+                }
+              }
+            },
+            "description": "The authenticated principal exceeded its rate limit.",
+            "headers": {
+              "Retry-After": {
+                "$ref": "#/components/headers/RetryAfter"
+              },
+              "X-RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimitLimit"
+              },
+              "X-RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimitRemaining"
+              },
+              "X-RateLimit-Reset": {
+                "$ref": "#/components/headers/RateLimitReset"
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IdentifyUserServerError"
+                }
+              }
+            },
+            "description": "The identity could not be written.",
+            "headers": {
+              "X-RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimitLimit"
+              },
+              "X-RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimitRemaining"
+              },
+              "X-RateLimit-Reset": {
+                "$ref": "#/components/headers/RateLimitReset"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "apiKeyBearer": []
+          },
+          {
+            "apiKeyHeader": []
+          }
+        ],
+        "summary": "Identify User",
+        "tags": [
+          "Identity"
+        ],
+        "x-emitkit-idempotency": {
+          "mode": "none"
+        },
+        "x-emitkit-mcp": {
+          "annotations": {
+            "destructiveHint": true,
+            "idempotentHint": false,
+            "readOnlyHint": false
+          },
+          "exposed": true,
+          "name": "identifyUser",
+          "title": "Identify User"
+        },
+        "x-emitkit-permission": "identities:write"
+      }
+    },
+    "/v1/identities/{user_id}": {
+      "delete": {
+        "description": "Erases the Organization's identity for a user, deleting its properties and aliases. Events already recorded are kept under their 90-day retention, but no longer show the user when they are read. Pass the canonical user_id; an alias is not accepted.",
+        "operationId": "deleteIdentity",
+        "parameters": [
+          {
+            "description": "The canonical identifier of the person to erase (not an alias).",
+            "in": "path",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteIdentityResponse"
+                }
+              }
+            },
+            "description": "The identity and its aliases were erased.",
+            "headers": {
+              "X-RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimitLimit"
+              },
+              "X-RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimitRemaining"
+              },
+              "X-RateLimit-Reset": {
+                "$ref": "#/components/headers/RateLimitReset"
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedError"
+                }
+              }
+            },
+            "description": "Authentication credentials are missing or invalid.",
+            "headers": {
+              "WWW-Authenticate": {
+                "$ref": "#/components/headers/WwwAuthenticate"
+              }
+            }
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenError"
+                }
+              }
+            },
+            "description": "The API key lacks this operation's scope (a read-only key can only read), isn't bound to a Project, or its Project was deleted.",
+            "headers": {
+              "X-RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimitLimit"
+              },
+              "X-RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimitRemaining"
+              },
+              "X-RateLimit-Reset": {
+                "$ref": "#/components/headers/RateLimitReset"
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteIdentityNotFoundError"
+                }
+              }
+            },
+            "description": "No identity in the Organization has this user_id.",
+            "headers": {
+              "X-RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimitLimit"
+              },
+              "X-RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimitRemaining"
+              },
+              "X-RateLimit-Reset": {
+                "$ref": "#/components/headers/RateLimitReset"
+              }
+            }
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitError"
+                }
+              }
+            },
+            "description": "The authenticated principal exceeded its rate limit.",
+            "headers": {
+              "Retry-After": {
+                "$ref": "#/components/headers/RetryAfter"
+              },
+              "X-RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimitLimit"
+              },
+              "X-RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimitRemaining"
+              },
+              "X-RateLimit-Reset": {
+                "$ref": "#/components/headers/RateLimitReset"
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteIdentityServerError"
+                }
+              }
+            },
+            "description": "The identity could not be erased.",
+            "headers": {
+              "X-RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimitLimit"
+              },
+              "X-RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimitRemaining"
+              },
+              "X-RateLimit-Reset": {
+                "$ref": "#/components/headers/RateLimitReset"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "apiKeyBearer": []
+          },
+          {
+            "apiKeyHeader": []
+          }
+        ],
+        "summary": "Delete Identity",
+        "tags": [
+          "Identity"
+        ],
+        "x-emitkit-idempotency": {
+          "mode": "none"
+        },
+        "x-emitkit-mcp": {
+          "annotations": {
+            "destructiveHint": true,
+            "idempotentHint": false,
+            "readOnlyHint": false
+          },
+          "exposed": true,
+          "name": "deleteIdentity",
+          "title": "Delete Identity"
+        },
+        "x-emitkit-permission": "identities:write"
+      }
+    }
+  },
+  "servers": [
+    {
+      "description": "Production API",
+      "url": "https://api.emitkit.com"
+    }
+  ],
+  "tags": [
+    {
+      "description": "Create and manage Events.",
+      "name": "Events"
+    },
+    {
+      "description": "Record user identities and aliases.",
+      "name": "Identity"
+    }
+  ],
+  "webhooks": {
+    "eventAnswered": {
+      "post": {
+        "description": "Sent to the event's callbackUrl once it is answered (type event.answered) or expires unanswered (type event.expired). Answer with a 2xx within 10 seconds; anything else is retried with backoff for about 16 hours with the same webhook-id.",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "webhook-id",
+            "description": "The same on every retry: drop repeats.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "webhook-timestamp",
+            "description": "Unix seconds; reject old ones.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "webhook-signature",
+            "description": "v1,<base64 HMAC-SHA256 of id.timestamp.body>",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CallbackPayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "2XX": {
+            "description": "Received."
+          }
+        },
+        "summary": "Callback: an event's answer or expiry"
+      }
+    }
+  }
+}

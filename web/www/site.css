@@ -1,0 +1,139 @@
+/* In-page anchors (#pricing, #faq) land below the sticky header. */
+html {
+  scroll-padding-top: 5rem;
+}
+
+/*
+ * Film grain over brand fields and photography, as the kit's artwork has.
+ * The kit bakes it with canvas noise; an SVG turbulence tile does the same
+ * without script and stays identical between prerender and hydration.
+ * Usually rendered by `<Grain />` between a field and its content, so it textures
+ * the field and not the UI on top; the hero is the exception (`.grain-over`).
+ */
+.grain {
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  opacity: 0.22;
+  mix-blend-mode: overlay;
+}
+
+/* The hero lays its grain over everything in the frame, a touch stronger. */
+.grain.grain-over {
+  opacity: 0.32;
+}
+
+/* Hero copy settles in once, on load. */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+}
+
+.rise {
+  animation: rise 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  animation-delay: var(--rise-delay, 0s);
+}
+
+/* A push notification arriving: it drops in, then drifts gently. */
+@keyframes arrive {
+  from {
+    opacity: 0;
+    transform: translateY(-18px) scale(0.97);
+  }
+}
+
+@keyframes drift {
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+.arrive {
+  animation:
+    arrive 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) both,
+    drift 7s ease-in-out 1.8s infinite;
+  animation-delay:
+    var(--arrive-delay, 1s), calc(var(--arrive-delay, 1s) + 0.8s);
+}
+
+/*
+ * The ping: halftone rings spreading from where a notification lands. Two
+ * copies, half a cycle apart, so one ring is always on its way out.
+ */
+@keyframes ping {
+  0% {
+    opacity: 0;
+    transform: scale(0.45);
+  }
+
+  25% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(1.15);
+  }
+}
+
+.ping {
+  animation: ping 6s cubic-bezier(0.25, 0.6, 0.35, 1) infinite;
+}
+
+.ping-late {
+  animation-delay: 3s;
+}
+
+/* A notification joining the stack slides in from above. */
+@keyframes stack-in {
+  from {
+    opacity: 0;
+    transform: translateY(-14px) scale(0.98);
+  }
+}
+
+.stack-in {
+  animation: stack-in 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+/*
+ * Sections fade up as they scroll into view, driven by scroll position rather
+ * than script, so nothing is ever hidden when JavaScript is off. Browsers
+ * without scroll-driven animations simply show the content.
+ */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    @keyframes reveal {
+      from {
+        opacity: 0;
+        transform: translateY(28px);
+      }
+    }
+
+    .reveal {
+      animation: reveal linear both;
+      animation-range: entry 0% entry 40%;
+      animation-timeline: view();
+    }
+  }
+}
+
+/* The shared reduced-motion rule shortens animations; these also lose delays and loops. */
+@media (prefers-reduced-motion: reduce) {
+  .rise,
+  .arrive,
+  .stack-in {
+    animation: none;
+  }
+
+  .ping {
+    animation: none;
+    opacity: 0.6;
+    transform: scale(0.85);
+  }
+
+  .ping-late {
+    display: none;
+  }
+}

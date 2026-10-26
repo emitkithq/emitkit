@@ -1,0 +1,29 @@
+---
+title: Authenticate with an API key
+description: Send an EmitKit API key to the MCP server, and keep it safe.
+sidebar:
+  order: 2
+---
+
+Send the key in one of these request headers:
+
+```http
+Authorization: Bearer emitkit_REPLACEWITHKEY
+```
+
+```http
+X-API-Key: emitkit_REPLACEWITHKEY
+```
+
+If both headers are present, they must carry the same key; otherwise tool
+calls fail with an authentication error. Keys in the URL are never read.
+
+The key decides what the agent can do: it writes events to the key's Project
+and can identify and erase users in the key's Organization. Give each agent or
+integration its own key, so you can rotate or revoke one without touching the
+others.
+
+:::note
+Some clients share configured headers with everyone in a workspace or
+account. Check how your client shares its configuration before adding a key.
+:::

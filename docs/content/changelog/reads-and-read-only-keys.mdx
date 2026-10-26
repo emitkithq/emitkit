@@ -1,0 +1,24 @@
+---
+title: Read events, list channels, read-only keys
+description: List a Project's events and channels over the API and MCP, check a key with GET /v1/me, and give read-only keys to whatever only needs to look.
+type: changelog
+date: 2026-09-26
+changelog:
+  category: API
+---
+
+- **`GET /v1/events`.** The Project's events, newest first, with their
+  answers. Filter by `channel`, `since` and `before`; page with `nextCursor`.
+  MCP: `listEvents`.
+- **`GET /v1/channels`.** The channel names already in use. MCP:
+  `listChannels`.
+- **`GET /v1/me`.** Which Organization and Project a key belongs to, and what
+  it may do.
+- **Read-only keys.** Choose **Read-only** when you create a key in
+  Settings → API keys. It reads events and channels and gets `403 forbidden`
+  for anything else; over MCP it only sees the read tools. See
+  [scopes](/api#authentication).
+- **`userId` in identify.** `POST /v1/identify` takes `userId`, like events do.
+  `user_id` still works.
+- **MCP authentication.** A bad or rate-limited key now gets an HTTP `401` or
+  `429` for every MCP request, instead of an error inside a tool result.

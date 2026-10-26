@@ -1,0 +1,32 @@
+{
+  "compilerOptions": {
+    "target": "ES2024",
+    "module": "preserve",
+    "moduleResolution": "bundler",
+    "moduleDetection": "force",
+    "verbatimModuleSyntax": true,
+    "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "exactOptionalPropertyTypes": false,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "paths": {
+      "@server/*": ["./src/server/*"],
+      "@worker/*": ["./src/worker/*"],
+      "@shared/*": ["./src/shared/*"],
+      "@app/*": ["./web/app/*"],
+      "@www/*": ["./web/www/*"],
+      "@ui/*": ["./web/ui/*"],
+      "@openapi/*": ["./openapi/*"],
+      "@e2e/*": ["./e2e/*"]
+    }
+  }
+}

@@ -1,0 +1,20 @@
+packages:
+  - docs
+allowBuilds:
+  esbuild: true
+  workerd: true
+  sharp: true
+  # Telemetry postinstall pulled in by Blume 1.x (via @asyncapi/converter).
+  "@scarf/scarf": false
+minimumReleaseAgeExclude:
+  - "@cloudflare/vite-plugin@1.58.0"
+  - "@cloudflare/workers-types@5.20260924.1"
+  - "@tanstack/react-router@1.170.39"
+  - wrangler@4.137.0
+  - "@emitkit/js@3.0.0"
+  - "@trakoo/emitkit@1.0.0"
+  - "@trakoo/openpanel@1.2.0"
+  - trakoo@2.4.0
+patchedDependencies:
+  "@better-auth/api-key@1.7.5": patches/@better-auth__api-key@1.7.5.patch
+  "@heroui/react@3.2.6": patches/@heroui__react@3.2.6.patch

@@ -1,0 +1,21 @@
+---
+title: Ask for a decision
+description: Events can carry buttons and fields and wait for an answer from your phone, so agents and automations can keep a human in the loop.
+type: changelog
+date: 2026-09-26
+changelog:
+  category: API
+---
+
+- **Buttons and fields on events.** Add `actions` with an `id` (buttons) and
+  `fields` (a choice, text, a number or yes/no) to an event, and it waits for
+  an answer. The push opens an answer page; the first person to answer
+  decides. Links (`actions` with a `url`) work on any event. See
+  [Ask for a decision](/concepts/questions).
+- **Read events back.** `GET /v1/events/{id}` returns an event with its
+  answer, and `POST /v1/events/{id}/cancel` stops one from waiting.
+- **Error codes.** Every error body now carries a stable `code`, such as
+  `validation_error` or `not_found`, and validation errors say how to fix each
+  problem.
+- **MCP.** `createEvent` can ask, and the new `getEvent` and `cancelEvent`
+  tools read and cancel.

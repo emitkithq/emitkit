@@ -1,0 +1,35 @@
+---
+title: EmitKit documentation
+description: Send events through the API, get them as push notifications, or connect an agent through EmitKit's MCP server.
+sidebar:
+  label: Overview
+  order: 0
+---
+
+EmitKit gives your applications and agents one place to record the moments
+that matter in your product: a signup, a payment, a failed job. Events appear
+live in the dashboard and can arrive on your phone as push notifications.
+
+<CardGroup cols={3}>
+  <Card title="Get started" href="/getting-started" icon="rocket">
+    Create an account and a workspace, then send your first event.
+  </Card>
+  <Card title="Use the API" href="/api" icon="code">
+    Send events and identify users with the public API.
+  </Card>
+  <Card title="Connect an agent" href="/mcp" icon="plug">
+    Use the same operations through the MCP server.
+  </Card>
+  <Card title="Push notifications" href="/concepts/notifications" icon="bell">
+    Get an alert on your devices when an event arrives.
+  </Card>
+  <Card title="API reference" href="/reference" icon="book-open">
+    Explore the request and response schemas and error responses.
+  </Card>
+  <Card title="Product changelog" href="/changelog" icon="newspaper">
+    Follow customer-facing improvements as they ship.
+  </Card>
+</CardGroup>
+
+Events are kept for 90 days. An identity is removed after 180 days without an
+identify call, or straight away when you erase it.

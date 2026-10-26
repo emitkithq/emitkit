@@ -1,0 +1,18 @@
+---
+title: Sign in with a code
+description: Passwordless sign-in now emails a six-digit code instead of a magic link, so it works inside the app installed on your Home Screen.
+type: changelog
+date: 2026-09-28
+changelog:
+  category: Dashboard
+---
+
+- **Codes instead of magic links.** **Continue with Email Code** emails you a
+  six-digit code that expires after 5 minutes. On iPhone, a link from Mail
+  opened in Safari, which keeps its own sign-in, so the app on your Home
+  Screen stayed signed out. You type a code into the app itself, and iOS
+  offers it from Mail above the keyboard. Asking again resends the same
+  code, and after three wrong tries you need a new one.
+- **Back to where you were.** Signing in from a link, such as a
+  notification you tapped while signed out, now opens that page. Before, it
+  could end on an error page instead.

@@ -1,0 +1,19 @@
+---
+title: Authentication
+description: How API and MCP requests authenticate.
+sidebar:
+  order: 4
+---
+
+The API and the MCP server authenticate with an API key, sent as a Bearer
+credential or in the `X-API-Key` header:
+
+```http
+Authorization: Bearer emitkit_REPLACEWITHKEY
+```
+
+The key supplies the Organization and the Project. Don't add an Organization
+or Project ID to a request body: EmitKit ignores them.
+
+People sign in to the dashboard with their email and a password, or with a
+code sent to their email. See [API keys](/api/api-keys) to create a key.

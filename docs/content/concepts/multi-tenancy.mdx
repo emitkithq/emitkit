@@ -1,0 +1,17 @@
+---
+title: Organization and Project scope
+description: How EmitKit keeps Organizations and Projects apart.
+sidebar:
+  order: 3
+---
+
+Every Project belongs to one Organization, and every Channel and event belongs
+to one Project. EmitKit never takes scope from a request body:
+
+- API requests get their Organization and Project from the API key.
+- Dashboard requests use the Organization you have open, and EmitKit checks
+  your membership on every request.
+
+Identities belong to the Organization, not to a Project: identifying a user
+from one Project makes them known to all of the Organization's Projects, and
+erasing them removes them everywhere.

@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://emitkit.com/sitemap.xml
+Sitemap: https://emitkit.com/docs/sitemap.xml

@@ -1,0 +1,38 @@
+diff --git a/dist/components/error-message/error-message.js b/dist/components/error-message/error-message.js
+index e41ad06d529546c53849da00fc0b21a0d5d239f3..953ad9aad377ac7b75c9a63d6de636aa093cc675 100644
+--- a/dist/components/error-message/error-message.js
++++ b/dist/components/error-message/error-message.js
+@@ -1,6 +1,7 @@
+ "use client";
+ import { errorMessageVariants } from '@heroui/styles';
+-import { Text } from 'react-aria-components/Text';
++import { use } from 'react';
++import { Text, TextContext } from 'react-aria-components/Text';
+ import { useHasTextSlot } from '../../utils/use-has-text-slot.js';
+ import { jsx } from 'react/jsx-runtime';
+ 
+@@ -9,9 +10,24 @@ const ErrorMessageRoot = ({
+   className,
+   ...rest
+ }) => {
++  const textContext = use(TextContext);
+   if (!useHasTextSlot("errorMessage")) {
+     return null;
+   }
++  // react-aria-components >= 1.21 gives every Dialog a TextContext with only a
++  // "description" slot, so a slotted Text throws "Invalid slot" there (e.g. a
++  // form's server error inside an AlertDialog). Render a plain alert instead.
++  if (textContext?.slots && textContext.slots.errorMessage == null) {
++    return /*#__PURE__*/jsx("span", {
++      className: errorMessageVariants({
++        className
++      }),
++      "data-slot": "error-message",
++      role: "alert",
++      ...rest,
++      children: children
++    });
++  }
+   return /*#__PURE__*/jsx(Text, {
+     className: errorMessageVariants({
+       className

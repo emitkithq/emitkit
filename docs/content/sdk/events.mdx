@@ -1,0 +1,52 @@
+---
+title: Events
+description: Send events to Project-scoped Channels, and read them back.
+sidebar:
+  order: 1
+---
+
+## Send
+
+`emitkit.events.create()` takes a Channel name and a title, with an optional
+description, icon, tags, source, user attribution, `notify` flag and JSON
+metadata. It returns the stored event.
+
+```typescript
+const event = await emitkit.events.create({
+  channelName: "signups",
+  title: "New user signed up",
+  userId: "user_123",
+  tags: ["signup"],
+  metadata: { plan: "free", source: "organic" },
+});
+```
+
+Channel names are [normalized](/concepts/events) and unique within the
+Project; a Channel is created on first use. `userId` can be your canonical
+user id or one of its aliases. `notify` (default `true`) sends a
+[push notification](/concepts/notifications). `{ amount, currency }` at the
+top level of `metadata` counts as revenue in the dashboard. A stored event is
+limited to 16 KB.
+
+## Read
+
+```typescript
+const event = await emitkit.events.get("event_…"); // with its answer, if it asked
+
+const page = await emitkit.events.list({ channel: "signups", limit: 20 });
+for (const event of page.events) {
+  console.log(event.createdAt, event.title); // newest first
+}
+if (page.nextCursor) {
+  const next = await emitkit.events.list({ channel: "signups", before: page.nextCursor });
+}
+
+const recent = await emitkit.events.list({ since: new Date(Date.now() - 3_600_000) });
+
+const channels = await emitkit.channels.list(); // name, icon, description
+const me = await emitkit.me(); // the key's organization, project and scopes
+```
+
+A [read-only key](/api/api-keys) can read, but not send.
+
+For the full schemas, see the [API reference](/reference).

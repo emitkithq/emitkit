@@ -1,0 +1,80 @@
+---
+title: CLI
+description: Send events, ask people for decisions and wait for the answer, and follow your events from the terminal.
+sidebar:
+  order: 0
+---
+
+`emitkit` puts EmitKit in your terminal, your scripts and your agents' shells.
+
+:::note
+The CLI is in preview and needs Node 20.3 or later. Run it with
+`npx @emitkit/cli@next`, or install it with `npm install -g @emitkit/cli@next`.
+:::
+
+```bash
+npx @emitkit/cli@next login     # paste an API key from Settings → API keys
+emitkit send deploys "Deployed v1.2.3" -i 🚀
+```
+
+## Send
+
+```bash
+emitkit send payments "New subscription" -i 💰 -m amount=49 -m currency=USD -t billing
+emitkit send nightly "Backup finished" --silent        # no push notification
+cat event.json | emitkit send --input - -t urgent      # a whole event as JSON, plus flags
+```
+
+`-m key=value` reads `true`, `false`, numbers (`amount=49`) and JSON
+(`{…}`, `[…]`) as such, and anything else as text; `version=1.10` stays text.
+
+## Ask and wait
+
+```bash
+emitkit ask deploys "Ship v1.2.3 to production?" -b ship -b hold:"Not yet" --timeout 30m
+emitkit ask support "Reply to Jane?" --text reply:Reply -b send -b skip
+emitkit ask ops "Which region?" --choice region:Region=eu,us -b go --no-wait
+```
+
+`ask` sends a [question](/concepts/questions) and waits for the answer on
+someone's phone, then prints it. It exits `0` when answered, `3` when the
+question expired or was canceled, and `124` when it's still waiting at
+`--timeout` (the question stays open). `--no-wait` prints the answer page and
+exits.
+
+```bash
+if emitkit ask deploys "Ship it?" -b ship -b hold --timeout 1h --json > answer.json \
+  && [ "$(jq -r .answer.action answer.json)" = ship ]; then
+  ./deploy.sh
+fi
+```
+
+## Read
+
+```bash
+emitkit events -c payments -n 20     # recent events, newest last
+emitkit tail -c payments             # follow new events as they arrive
+emitkit get event_…                  # one event and its answer
+emitkit cancel event_…               # stop a question from waiting
+emitkit channels
+emitkit whoami                       # the key's organization, project and scopes
+emitkit identify user_123 -p plan=pro -a jane@example.com
+```
+
+## For scripts and agents
+
+`--json` prints JSON on stdout; errors go to stderr as
+`{ "error": { "code", "message", "details", "requestId", "status" } }` with
+the [API's error codes](/api#errors-and-request-ids). Usage mistakes exit `2`,
+API and network errors `1`.
+
+## Configuration
+
+| Setting | Order |
+| --- | --- |
+| API key | `--api-key`, `EMITKIT_API_KEY`, then the key saved by `emitkit login` |
+| API URL | `--api-url`, `EMITKIT_BASE_URL`, the saved URL, then `https://api.emitkit.com`. Set it for a [self-hosted](/self-hosting) EmitKit. |
+
+`emitkit login` checks the key before saving it to
+`~/.config/emitkit/config.json` (readable by you only). The CLI never prints
+the key; `whoami` shows its first characters. `emitkit logout` forgets it.

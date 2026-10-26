@@ -1,0 +1,19 @@
+---
+title: SDK 3 and the CLI (preview)
+description: A typed TypeScript SDK with ask() and callback verification, and emitkit in your terminal.
+type: changelog
+date: 2026-09-26
+changelog:
+  category: SDK
+---
+
+- **`@emitkit/js` 3** (`npm install @emitkit/js@next`). Typed requests and
+  responses; `ask()` sends a question and waits for the answer from someone's
+  phone; `events.get`, `events.list`, `events.cancel`, `channels.list`,
+  `identities.delete` and `me`; `verifyCallback()` for
+  [callbacks](/concepts/questions#callbacks); one `EmitKitError` with the
+  API's `code`; safe retries with an automatic idempotency key. No
+  dependencies. See the [SDK docs](/sdk).
+- **The CLI** (`npx @emitkit/cli@next`). `emitkit send`, `ask` (waits, with
+  exit codes for scripts), `events`, `tail`, `channels`, `identify`, with
+  `--json` for agents. See [CLI](/cli).

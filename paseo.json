@@ -1,0 +1,11 @@
+{
+  "worktree": {
+    "setup": "zsh scripts/workspace-setup.sh"
+  },
+  "scripts": {
+    "dev": {
+      "command": "PORT=$PASEO_PORT pnpm dev",
+      "type": "service"
+    }
+  }
+}

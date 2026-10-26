@@ -1,0 +1,20 @@
+---
+title: A simpler dashboard, with revenue
+description: One live feed per Project, event details that open in place, and revenue from the money your events carry.
+type: changelog
+date: 2026-09-24
+changelog:
+  category: Dashboard
+---
+
+- **One feed.** The dashboard is now a single live feed. Pick a Project next to
+  your organization's name. Open any event to see its details right under it,
+  including a link to show only that Channel.
+- **Pulse.** Events over the last 24 hours, 7 or 30 days, compared with the
+  period before.
+- **Revenue.** Send `amount` and `currency` in an event's metadata, for example
+  `"metadata": { "amount": 49, "currency": "EUR" }`, and the dashboard shows
+  the amount on the event and adds it up as revenue. See
+  [Metadata](/concepts/events#metadata).
+- **Readable details.** Durations, sizes, percentages, dates, links and nested
+  objects in metadata are formatted instead of shown as raw values.
