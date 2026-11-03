@@ -1,0 +1,136 @@
+---
+title: Connect with OAuth
+description: Connect ChatGPT, Claude and other MCP clients to a Project by signing in, without an API key.
+sidebar:
+  order: 1
+---
+
+MCP clients that sign in with OAuth, such as ChatGPT, Claude and Claude Code,
+connect to EmitKit's MCP server without an API key. You add the server URL,
+sign in to EmitKit, pick the Project the app may use, and approve. The app
+gets the same tools and [MCP Events](/integrations/mcp-events) as a client with
+an API key, limited to that Project.
+
+```text
+https://api.emitkit.com/mcp
+```
+
+<Steps>
+  <Step title="Add the server in your client">
+    Paste the URL above where your client adds a remote MCP server or
+    connector. The client finds EmitKit's sign-in on its own.
+  </Step>
+  <Step title="Sign in to EmitKit">
+    Your browser opens EmitKit. Sign in, or create an account.
+  </Step>
+  <Step title="Pick a Project and authorize">
+    The consent screen names the app, your account, the Project it will use
+    and where you'll be sent back to. Choose the Project and select
+    **Authorize**.
+  </Step>
+</Steps>
+
+:::note
+Only owners and admins of an organization can connect apps to its Projects.
+A connected app can send events and erase users, just like an API key, which
+only owners and admins can create.
+:::
+
+## Clients
+
+<Tabs>
+  <Tab title="ChatGPT">
+
+1. In ChatGPT, open **Settings → Security and login** and turn on
+   **Developer mode**. Whether you can depends on your account and
+   workspace.
+2. Go to [ChatGPT Plugins](https://chatgpt.com/plugins) and select the plus
+   button.
+3. Enter a name, such as EmitKit, and under **Connection** enter
+   `https://api.emitkit.com/mcp`.
+4. Create the connection. ChatGPT registers itself and opens EmitKit's
+   sign-in; after you authorize, it lists EmitKit's tools.
+
+  </Tab>
+  <Tab title="Claude">
+
+In Claude, open **Customize → Connectors**, select **+** and then **Add
+custom connector**, and enter `https://api.emitkit.com/mcp`. Leave the OAuth
+fields under **Advanced settings** empty: Claude registers itself. Select
+**Connect** on the new connector to open EmitKit's sign-in.
+
+On Team and Enterprise plans an owner adds the connector under
+**Organization settings → Connectors**, and each member then connects with
+their own EmitKit account.
+
+  </Tab>
+  <Tab title="Claude Code">
+
+```bash
+claude mcp add --transport http emitkit https://api.emitkit.com/mcp
+```
+
+Then run `/mcp` in Claude Code and choose **Authenticate**. Your browser opens
+EmitKit; after you authorize, Claude Code stores the tokens.
+
+  </Tab>
+  <Tab title="Other clients">
+
+Any client that implements [MCP authorization](https://modelcontextprotocol.io/specification/2025-11-25/basic/authorization)
+works: dynamic client registration, the authorization code flow with PKCE
+(`S256`), and the `resource` parameter. Clients that can send a fixed
+header can use an [API key](/mcp/api-key) instead.
+
+  </Tab>
+</Tabs>
+
+## What a connected app can do
+
+| Can | Scope |
+| --- | --- |
+| Send, read and cancel events with `createEvent`, `getEvent`, `listEvents`, `listChannels` and `cancelEvent` | The Project you picked |
+| Subscribe to `event.created` with [MCP Events](/integrations/mcp-events) | The Project you picked |
+| Identify and erase users with `identifyUser` and `deleteIdentity` | The Project's organization |
+| Read your name and email address | Only if it asks for `openid`, `profile` or `email` |
+
+Every request counts toward the same limit as an API key: 100 a minute per
+connection. Events an app creates are never delivered back to its own
+MCP Events subscriptions.
+
+## Revoke access
+
+Open **Settings → Connected apps** in the dashboard and select **Revoke**. The
+app stops working at once: its next request is refused, its refresh token no
+longer works, and its event subscriptions end. Connect it again to restore
+access.
+
+A connection also stops working when its Project is deleted, or when you stop
+being an owner or admin of the organization. The app then asks you to sign in
+again, and you can pick another Project.
+
+## For client developers
+
+EmitKit follows the MCP authorization spec. The authorization server lives on
+the dashboard host; the MCP endpoint is the protected resource.
+
+| | |
+| --- | --- |
+| Protected resource metadata | `https://api.emitkit.com/.well-known/oauth-protected-resource` (also at `…/mcp`) |
+| Resource (token audience) | `https://api.emitkit.com/mcp`, used by default when a request has no `resource` |
+| Issuer | `https://app.emitkit.com/api/auth` |
+| Authorization server metadata | `https://app.emitkit.com/.well-known/oauth-authorization-server/api/auth` |
+| Registration | Dynamic client registration, public clients (`token_endpoint_auth_method: none`) |
+| Flow | Authorization code with PKCE `S256` |
+| Scopes | `mcp` (required), plus `openid`, `profile`, `email`, `offline_access` |
+| Access tokens | JWT, 1 hour, audience-bound to the resource, carrying `project_id` |
+| Refresh tokens | 30 days, rotated on use |
+
+A request without credentials gets `401` with
+`WWW-Authenticate: Bearer resource_metadata="…", scope="mcp"`. An invalid,
+expired or revoked token gets `401` with `error="invalid_token"`; a token
+without the `mcp` scope gets `403` with `error="insufficient_scope"`.
+
+Redirect URIs must be `https`, except `http://localhost`, `127.0.0.1` and
+`[::1]` for native clients. A registration whose redirect URIs are all such
+loopback URLs is treated as a native app. Registration allows five clients a
+minute from one address.

@@ -26,7 +26,13 @@ import type { Page } from "@playwright/test";
  * - The layout overflows sideways on a phone.
  */
 const HEADLINE = "Stay in the loop with your product.";
-const SECTION_IDS = ["how-it-works", "developers", "pricing", "faq"] as const;
+const SECTION_IDS = [
+  "how-it-works",
+  "developers",
+  "events",
+  "pricing",
+  "faq",
+] as const;
 const MAX_HTML_BYTES = 160_000;
 
 const collectErrors = (page: Page) => {

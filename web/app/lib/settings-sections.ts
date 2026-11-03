@@ -5,6 +5,7 @@ export const settingsSections = [
   "billing",
   "members",
   "notifications",
+  "connected-apps",
   "organization",
   "account",
 ] as const;
@@ -40,6 +41,7 @@ export const settingsSectionGroups: readonly {
   {
     items: [
       { icon: "bell", label: "Notifications", value: "notifications" },
+      { icon: "plug", label: "Connected apps", value: "connected-apps" },
       { icon: "user", label: "Account", value: "account" },
     ],
     label: "You",

@@ -258,7 +258,7 @@ export const Pricing = () => {
           className="reveal"
           id="pricing-title"
           label="Pricing"
-          number="04"
+          number="05"
           title="One price. Unlimited events."
         >
           Let us run it for you or your team, monthly, yearly or paid once while

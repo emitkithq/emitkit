@@ -51,6 +51,7 @@ export default defineConfig({
       { label: "TypeScript SDK", path: "/sdk" },
       { label: "Concepts", path: "/concepts" },
       { label: "MCP", path: "/mcp" },
+      { label: "Integrations", path: "/integrations" },
       { label: "Self-hosting", path: "/self-hosting" },
       { href: "/reference", label: "API reference", path: "/reference" },
       { href: "/changelog", label: "Changelog", path: "/changelog" },

@@ -14,6 +14,7 @@ const COLUMNS = [
   {
     links: [
       ["How it works", "/#how-it-works"],
+      ["MCP Events", "/#events"],
       ["Push notifications", "/#push"],
       ["Pricing", "/#pricing"],
       ["FAQ", "/#faq"],

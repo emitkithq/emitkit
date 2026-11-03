@@ -1,5 +1,7 @@
 import openapiDocument from "@openapi/openapi.json?raw";
 import { McpServer } from "@server/mcp/mcp";
+import { Auth } from "@server/platform/auth";
+import { MCP_SCOPE, mcpResource } from "@server/platform/auth-options";
 import { AppConfig } from "@server/platform/config";
 import { makeRequestId } from "@server/platform/ids";
 import {
@@ -70,7 +72,27 @@ const Routes = HttpRouter.use(
   Effect.fnUntraced(function* (router) {
     const api = yield* PublicApi;
     const mcp = yield* McpServer;
-    const { docsUrl } = yield* AppConfig;
+    const { apiUrl, docsUrl } = yield* AppConfig;
+    const { issuer } = yield* Auth;
+    // RFC 9728: where MCP clients learn that the app host's OAuth server
+    // issues tokens for /mcp. The path-inserted document is the RFC's; the
+    // root one is where MCP clients fall back to, and names /mcp as well
+    // (as MCP servers do), since /mcp is the only protected resource.
+    const protectedResource = json(
+      200,
+      {
+        authorization_servers: [issuer],
+        bearer_methods_supported: ["header"],
+        resource: mcpResource(apiUrl),
+        resource_documentation: `${docsUrl}/integrations/oauth`,
+        resource_name: "EmitKit MCP",
+        scopes_supported: [MCP_SCOPE],
+      },
+      {
+        "Access-Control-Allow-Origin": "*",
+        "Cache-Control": "public, max-age=3600",
+      }
+    );
     const health = json(200, {
       docs: docsUrl,
       name: "EmitKit API",
@@ -82,6 +104,16 @@ const Routes = HttpRouter.use(
       HttpRouter.route("GET", "/health", health),
       HttpRouter.route("GET", "/openapi.json", openapi),
       HttpRouter.route("*", "/mcp", mcp.handle),
+      HttpRouter.route(
+        "GET",
+        "/.well-known/oauth-protected-resource",
+        protectedResource
+      ),
+      HttpRouter.route(
+        "GET",
+        "/.well-known/oauth-protected-resource/mcp",
+        protectedResource
+      ),
       HttpRouter.route("GET", "/v1/me", query(api.me)),
       HttpRouter.route("POST", "/v1/events", rest(api.createEvent)),
       HttpRouter.route("GET", "/v1/events", query(api.listEvents)),

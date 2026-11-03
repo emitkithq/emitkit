@@ -35,6 +35,17 @@ export const FAQ_ITEMS: FaqItem[] = [
     question: "Can AI agents send events?",
   },
   {
+    answer:
+      "Yes, with MCP Events. Over MCP an agent subscribes to new events, filtered by channel, tag or user, and EmitKit posts each one to the agent's HTTPS endpoint as a signed webhook, so it can act straight away. Events an agent created itself are never sent back to it, so it can't loop.",
+    id: "agent-events",
+    question: "Can an agent react to events as they happen?",
+  },
+  {
+    answer: `Yes. Add ${MCP_ENDPOINT} as a connector in ChatGPT or Claude, or as an MCP server in Claude Code. You sign in to EmitKit, pick the project the app may use and authorize it, with no API key to copy. Owners and admins can connect apps, and you can revoke one at any time in Settings → Connected apps.`,
+    id: "chatgpt",
+    question: "Can I connect ChatGPT or Claude?",
+  },
+  {
     answer: `Send a POST request to ${EVENTS_ENDPOINT} with your API key in the Authorization header, call the @emitkit/js TypeScript SDK, or let an AI agent send it through the MCP server at ${MCP_ENDPOINT}. A channel is created the first time you name it.`,
     id: "send",
     question: "How do I send an event?",

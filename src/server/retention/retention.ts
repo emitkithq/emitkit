@@ -5,6 +5,7 @@ import { EventStore, RETENTION_DAYS } from "@server/events/event-store";
 import { Events } from "@server/events/events";
 import { Idempotency } from "@server/idempotency/idempotency";
 import { Identities } from "@server/identities/identities";
+import { McpEvents } from "@server/mcp/events";
 import { Projects } from "@server/projects/projects";
 import { Clock, Context, DateTime, Effect, Layer } from "effect";
 import { SqlClient } from "effect/unstable/sql";
@@ -17,7 +18,8 @@ const isoDaysAgo = (nowMs: number, days: number) =>
 
 /**
  * Hourly housekeeping (cron). Events in Analytics Engine expire on their own
- * after ~90 days; everything else with a lifetime is swept here.
+ * after ~90 days; everything else with a lifetime is swept here, including
+ * MCP Events subscriptions that weren't refreshed.
  */
 export class Retention extends Context.Service<
   Retention,
@@ -32,6 +34,7 @@ export class Retention extends Context.Service<
       const identities = yield* Identities;
       const idempotency = yield* Idempotency;
       const projects = yield* Projects;
+      const mcpEvents = yield* McpEvents;
       const cards = yield* Cards;
 
       const runSweep = Effect.fn("Retention.sweep")(function* () {
@@ -43,6 +46,7 @@ export class Retention extends Context.Service<
           receipts,
           expiredIdentities,
           purgedProjects,
+          expiredSubscriptions,
           expiredCards,
         ] = yield* Effect.all(
           [
@@ -51,6 +55,7 @@ export class Retention extends Context.Service<
             idempotency.expire(nowMs),
             identities.expire(isoDaysAgo(nowMs, IDENTITY_INACTIVITY_DAYS)),
             projects.purgeDeleted(isoDaysAgo(nowMs, RETENTION_DAYS)),
+            mcpEvents.expire(nowMs),
             cards.expire(nowMs - RETENTION_DAYS * DAY_MS),
           ],
           { concurrency: 1 }
@@ -67,6 +72,7 @@ export class Retention extends Context.Service<
           events: expiredEvents,
           identities: expiredIdentities,
           idempotencyReceipts: receipts,
+          mcpSubscriptions: expiredSubscriptions,
           projects: purgedProjects,
           tombstones,
         };

@@ -54,12 +54,35 @@ const TEXT_EXTENSIONS =
   /\.(?:json|jsonl|trace|network|stacks|txt|html|js|css|md)$/u;
 const REDACTIONS: readonly (readonly [RegExp, string])[] = [
   [/emitkit_[A-Za-z0-9]{8,64}/gu, "emitkit_[REDACTED]"],
+  // MCP Events signing secrets, also where JSON escaping hides the "secret" key.
+  [/whsec_[A-Za-z0-9+/=]+/gu, "whsec_[REDACTED]"],
+  // OAuth: JWTs (access and ID tokens), bearer values, and token fields in
+  // JSON (plain or escaped inside trace JSON) and in form bodies and URLs.
+  [
+    /eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}/gu,
+    "[REDACTED-JWT]",
+  ],
+  [/(?<keep>Bearer\s+)[A-Za-z0-9._~+/=-]{16,}/gu, "$<keep>[REDACTED]"],
+  [
+    /(?<keep>\\?"(?:access_token|refresh_token|id_token|code|code_verifier)\\?"\s*:\s*\\?")[^"\\]*/gu,
+    "$<keep>[REDACTED]",
+  ],
+  [
+    /(?<keep>[?&]?(?:refresh_token|code_verifier|code)=)[A-Za-z0-9._~%+/-]{8,}/gu,
+    "$<keep>[REDACTED]",
+  ],
   [
     /(?<keep>"name":\s*"(?:authorization|cookie|set-cookie|x-api-key)",\s*"value":\s*")[^"]*"/giu,
     '$<keep>[REDACTED]"',
   ],
   [
     /(?<keep>(?:emitkit|__Secure-emitkit)\.[a-z_]+=)[^;"\s\\]+/giu,
+    "$<keep>[REDACTED]",
+  ],
+  // Better Auth cookies as objects: HAR `cookies` entries and Playwright's
+  // storage state, plain or escaped inside trace JSON.
+  [
+    /(?<keep>\\?"name\\?"\s*:\s*\\?"(?:__Secure-)?emitkit\.[a-z_]+\\?"\s*,\s*\\?"value\\?"\s*:\s*\\?")[^"\\]*/giu,
     "$<keep>[REDACTED]",
   ],
   [
@@ -222,7 +245,7 @@ const report = `# EmitKit E2E report — ${runName}, ${date}
 
 Reproduce: \`${runEnv} pnpm e2e && ${runEnv} pnpm e2e:report\`${server} (see e2e/README.md).
 Open a trace with \`pnpm exec playwright show-trace <file>\`. Traces are redacted:
-API keys, cookies, tokens and the test password are replaced by \`[REDACTED]\`.
+API keys, webhook signing secrets, OAuth tokens and codes, cookies and the test password are replaced by \`[REDACTED]\`.
 
 | | Scenario | Test | Time | Evidence |
 | --- | --- | --- | --- | --- |

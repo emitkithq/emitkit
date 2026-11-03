@@ -1,5 +1,7 @@
 import { Callbacks } from "@server/cards/callbacks";
 import type { InfrastructureError } from "@server/errors";
+import { McpEvents } from "@server/mcp/events";
+import type { WebhookDeliveryError } from "@server/mcp/events";
 import { Notifications } from "@server/notifications/notifications";
 import { AppConfig } from "@server/platform/config";
 import type { Env } from "@server/platform/env";
@@ -24,12 +26,18 @@ const work = (
   body: QueueMessage
 ): Effect.Effect<
   void,
-  InfrastructureError,
-  AppConfig | Notifications | Callbacks
+  InfrastructureError | WebhookDeliveryError,
+  AppConfig | Notifications | Callbacks | McpEvents
 > => {
   switch (body.type) {
     case "event.created": {
       return pushEvent(body);
+    }
+    case "mcp.fanout": {
+      return McpEvents.use((mcpEvents) => mcpEvents.fanOut(body));
+    }
+    case "mcp.delivery": {
+      return McpEvents.use((mcpEvents) => mcpEvents.deliver(body));
     }
     case "answer.expire": {
       return Callbacks.use((callbacks) => callbacks.expire(body));
@@ -61,8 +69,10 @@ const handle = (message: Message<QueueMessage>) =>
 
 /**
  * Queue consumer, 5 messages at a time: pushes created events to Web Push
- * subscribers, and runs the expiry and callbacks of events that wait for
- * an answer (callbacks retry with their own backoff, as new messages).
+ * subscribers, fans events out to MCP Events subscriptions and delivers
+ * their webhooks (a failed delivery is retried as this message: 10, 20,
+ * 40 s), and runs the expiry and callbacks of events that wait for an
+ * answer (callbacks retry with their own backoff, as new messages).
  */
 export const handleQueue = async (
   batch: MessageBatch<QueueMessage>,

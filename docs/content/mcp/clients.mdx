@@ -1,15 +1,16 @@
 ---
 title: Connect a client
-description: Add EmitKit to Claude Code or any MCP client that can send a request header.
+description: Add EmitKit to Claude Code, ChatGPT, Claude or any MCP client, with OAuth or an API key.
 sidebar:
   order: 1
 ---
 
-Any MCP client that supports remote (Streamable HTTP) servers with a custom
-request header can connect. Create an [API key](/api/api-keys) for the Project
-the agent should write to, then configure the client.
+Clients that sign in with OAuth, such as ChatGPT, Claude and Claude Code,
+need only the server URL: see [Connect with OAuth](/integrations/oauth). Any
+client that can send a custom request header can use an
+[API key](/api/api-keys) for the Project the agent should write to instead.
 
-## Claude Code
+## Claude Code with an API key
 
 ```bash
 claude mcp add --transport http emitkit https://api.emitkit.com/mcp \
@@ -34,9 +35,7 @@ Most clients accept a JSON server entry like this:
 }
 ```
 
-Connectors that can only sign in with OAuth can't connect yet: EmitKit's MCP
-server accepts API keys only.
-
-A request without a key is rejected with `401`. A wrong key still lets the
+A request without credentials is rejected with `401` and a
+`WWW-Authenticate` header that points OAuth clients at EmitKit's sign-in. A wrong key still lets the
 client connect and list tools, because EmitKit checks the key when a tool is
 called: if the first tool call returns an authentication error, check the key.
