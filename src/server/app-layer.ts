@@ -10,9 +10,11 @@ import { Events } from "@server/events/events";
 import { GettingStartedFlow } from "@server/getting-started/getting-started";
 import { Idempotency } from "@server/idempotency/idempotency";
 import { Identities } from "@server/identities/identities";
+import { McpEvents } from "@server/mcp/events";
 import { McpServer } from "@server/mcp/mcp";
 import { Notifications } from "@server/notifications/notifications";
 import { PushPreferencesFlow } from "@server/notifications/preferences";
+import { OAuthGrants } from "@server/oauth/grants";
 import { OrganizationBrands } from "@server/organizations/brand";
 import { Memberships } from "@server/organizations/memberships";
 import { AnalyticsEngine } from "@server/platform/analytics-engine";
@@ -29,6 +31,7 @@ import { EventsQueue } from "@server/platform/queue";
 import { SecretBox } from "@server/platform/secret-box";
 import { Telemetry } from "@server/platform/telemetry";
 import { WebPush } from "@server/platform/web-push";
+import { Webhooks } from "@server/platform/webhooks";
 import { TextModel } from "@server/platform/workers-ai";
 import { Projects } from "@server/projects/projects";
 import { PublicApi } from "@server/public-api/public-api";
@@ -56,7 +59,8 @@ export const makeAppLayer = (env: Env) => {
     ContextDev.layer,
     SecretBox.layer,
     Telemetry.layer,
-    CallbackSender.layer
+    CallbackSender.layer,
+    Webhooks.layer
   ).pipe(Layer.provideMerge(platform));
   const records = Layer.mergeAll(
     Memberships.layer,
@@ -77,11 +81,14 @@ export const makeAppLayer = (env: Env) => {
     Auth.layer,
     EmojiSuggester.layer,
     Milestones.layer,
-    Callbacks.layer
+    Callbacks.layer,
+    OAuthGrants.layer
   ).pipe(Layer.provideMerge(delivery));
-  const product = Layer.mergeAll(ApiKeys.layer, Events.layer).pipe(
-    Layer.provideMerge(domain)
-  );
+  const product = Layer.mergeAll(
+    ApiKeys.layer,
+    Events.layer,
+    McpEvents.layer
+  ).pipe(Layer.provideMerge(domain));
   const flows = Layer.mergeAll(
     GettingStartedFlow.layer,
     Retention.layer,

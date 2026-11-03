@@ -14,6 +14,7 @@ import { Events } from "@server/events/events";
 import { GettingStartedFlow } from "@server/getting-started/getting-started";
 import { Notifications } from "@server/notifications/notifications";
 import { PushPreferencesFlow } from "@server/notifications/preferences";
+import { OAuthGrants } from "@server/oauth/grants";
 import { OrganizationBrands } from "@server/organizations/brand";
 import { Memberships } from "@server/organizations/memberships";
 import type { Workspace } from "@server/organizations/memberships";
@@ -438,6 +439,40 @@ const router = os.router({
       const notifications = yield* Notifications;
       yield* notifications
         .unsubscribe(workspace.organizationId, session.userId, input.endpoint)
+        .pipe(Effect.mapError(toRpcError));
+      return { ok: true };
+    }),
+  },
+  // The signed-in user's own OAuth grants, across organizations: the
+  // consent screen's choices and Settings → Connected apps.
+  oauth: {
+    choices: os.oauth.choices.effect(function* ({ context }) {
+      const session = yield* requireSession(context);
+      const grants = yield* OAuthGrants;
+      return yield* grants
+        .choices(session.userId)
+        .pipe(Effect.mapError(toRpcError));
+    }),
+    connections: os.oauth.connections.effect(function* ({ context }) {
+      const session = yield* requireSession(context);
+      const grants = yield* OAuthGrants;
+      return yield* grants
+        .connections(session.userId)
+        .pipe(Effect.mapError(toRpcError));
+    }),
+    revoke: os.oauth.revoke.effect(function* ({ context, input }) {
+      const session = yield* requireSession(context);
+      const grants = yield* OAuthGrants;
+      yield* grants
+        .revoke(session.userId, input.id)
+        .pipe(Effect.mapError(toRpcError));
+      return { ok: true };
+    }),
+    select: os.oauth.select.effect(function* ({ context, input }) {
+      const session = yield* requireSession(context);
+      const grants = yield* OAuthGrants;
+      yield* grants
+        .select(session, input.projectId)
         .pipe(Effect.mapError(toRpcError));
       return { ok: true };
     }),

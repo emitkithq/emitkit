@@ -19,6 +19,7 @@ import { Route as OrgSettingsRouteImport } from './routes/$org.settings'
 import { Route as AIdRouteImport } from './routes/a.$id'
 import { Route as AcceptInvitationIdRouteImport } from './routes/accept-invitation.$id'
 import { Route as AuthPathRouteImport } from './routes/auth.$path'
+import { Route as OauthConsentRouteImport } from './routes/oauth.consent'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -70,6 +71,11 @@ const AuthPathRoute = AuthPathRouteImport.update({
   path: '/auth/$path',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OauthConsentRoute = OauthConsentRouteImport.update({
+  id: '/oauth/consent',
+  path: '/oauth/consent',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -81,6 +87,7 @@ export interface FileRoutesByFullPath {
   '/a/$id': typeof AIdRoute
   '/accept-invitation/$id': typeof AcceptInvitationIdRoute
   '/auth/$path': typeof AuthPathRoute
+  '/oauth/consent': typeof OauthConsentRoute
   '/$org/': typeof OrgIndexRoute
 }
 export interface FileRoutesByTo {
@@ -92,6 +99,7 @@ export interface FileRoutesByTo {
   '/a/$id': typeof AIdRoute
   '/accept-invitation/$id': typeof AcceptInvitationIdRoute
   '/auth/$path': typeof AuthPathRoute
+  '/oauth/consent': typeof OauthConsentRoute
   '/$org': typeof OrgIndexRoute
 }
 export interface FileRoutesById {
@@ -105,6 +113,7 @@ export interface FileRoutesById {
   '/a/$id': typeof AIdRoute
   '/accept-invitation/$id': typeof AcceptInvitationIdRoute
   '/auth/$path': typeof AuthPathRoute
+  '/oauth/consent': typeof OauthConsentRoute
   '/$org/': typeof OrgIndexRoute
 }
 export interface FileRouteTypes {
@@ -119,6 +128,7 @@ export interface FileRouteTypes {
     | '/a/$id'
     | '/accept-invitation/$id'
     | '/auth/$path'
+    | '/oauth/consent'
     | '/$org/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -130,6 +140,7 @@ export interface FileRouteTypes {
     | '/a/$id'
     | '/accept-invitation/$id'
     | '/auth/$path'
+    | '/oauth/consent'
     | '/$org'
   id:
     | '__root__'
@@ -142,6 +153,7 @@ export interface FileRouteTypes {
     | '/a/$id'
     | '/accept-invitation/$id'
     | '/auth/$path'
+    | '/oauth/consent'
     | '/$org/'
   fileRoutesById: FileRoutesById
 }
@@ -152,6 +164,7 @@ export interface RootRouteChildren {
   AIdRoute: typeof AIdRoute
   AcceptInvitationIdRoute: typeof AcceptInvitationIdRoute
   AuthPathRoute: typeof AuthPathRoute
+  OauthConsentRoute: typeof OauthConsentRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -226,6 +239,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthPathRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/oauth/consent': {
+      id: '/oauth/consent'
+      path: '/oauth/consent'
+      fullPath: '/oauth/consent'
+      preLoaderRoute: typeof OauthConsentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -252,6 +272,7 @@ const rootRouteChildren: RootRouteChildren = {
   AIdRoute: AIdRoute,
   AcceptInvitationIdRoute: AcceptInvitationIdRoute,
   AuthPathRoute: AuthPathRoute,
+  OauthConsentRoute: OauthConsentRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

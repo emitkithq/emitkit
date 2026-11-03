@@ -65,7 +65,7 @@ await emitkit.events.create({
 
 const WAYS = [
   {
-    body: "Claude, Cursor or any MCP client gets createEvent, identifyUser and deleteIdentity tools.",
+    body: "ChatGPT, Claude, Cursor or any MCP client gets createEvent, identifyUser and deleteIdentity tools. Sign in with OAuth, or use an API key.",
     title: "MCP server",
   },
   {

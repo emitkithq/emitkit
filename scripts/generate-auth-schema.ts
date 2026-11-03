@@ -13,6 +13,7 @@ const noop = () => Promise.resolve();
 const options = makeAuthOptions(
   {
     allowSignup: true,
+    apiUrl: "http://api.localhost",
     appUrl: "http://localhost",
     devSignIn: false,
     siteUrl: "http://localhost",

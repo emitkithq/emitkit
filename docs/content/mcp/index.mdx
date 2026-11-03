@@ -1,6 +1,6 @@
 ---
 title: MCP server
-description: Give agents EmitKit's API operations as MCP tools.
+description: Give agents EmitKit's API operations as MCP tools, and new events as they happen.
 sidebar:
   order: 0
 ---
@@ -31,16 +31,27 @@ scope. The result carries the API's JSON response. A
 `listChannels`. A missing, invalid or rate-limited key gets an HTTP `401` or
 `429` for every request, before any tool runs.
 
-The server authenticates with an [API key](/api/api-keys) sent in a request
-header. It supports MCP protocol versions `2025-11-25`, `2025-06-18`,
-`2025-03-26`, and `2024-11-05`.
+Clients sign in with [OAuth](/integrations/oauth) (ChatGPT, Claude, Claude
+Code) or send an [API key](/api/api-keys) in a request header. It supports MCP protocol versions `2026-07-28` (per-request metadata,
+`server/discover`), `2025-11-25`, `2025-06-18`, `2025-03-26`, and
+`2024-11-05` (`initialize`).
+
+On `2026-07-28` agents can also subscribe to new events with
+[MCP Events](/integrations/mcp-events): EmitKit posts each matching event to
+the agent as a signed webhook.
 
 <CardGroup cols={2}>
+  <Card title="Connect with OAuth" href="/integrations/oauth" icon="log-in">
+    ChatGPT, Claude and Claude Code: sign in and pick a Project.
+  </Card>
   <Card title="Connect a client" href="/mcp/clients" icon="plug">
     Claude Code and other clients that send a fixed header.
   </Card>
   <Card title="Authenticate with an API key" href="/mcp/api-key" icon="key">
     Which headers to send, and how to keep the key safe.
+  </Card>
+  <Card title="MCP Events" href="/integrations/mcp-events" icon="radio-tower">
+    Subscribe an agent to new events, delivered as signed webhooks.
   </Card>
 </CardGroup>
 

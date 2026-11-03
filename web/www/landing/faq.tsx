@@ -11,7 +11,7 @@ export const Faq = () => (
         <SectionIntro
           id="faq-title"
           label="FAQ"
-          number="05"
+          number="06"
           title="Questions, answered."
         />
         <p className="text-copy text-muted m-0 mt-4">

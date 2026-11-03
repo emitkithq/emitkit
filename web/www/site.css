@@ -97,6 +97,28 @@ html {
   animation: stack-in 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
 
+/* A pulse running down the wire from an event to the agent that hears it. */
+@keyframes wire-pulse {
+  0% {
+    opacity: 0;
+    transform: translateY(0);
+  }
+
+  20%,
+  75% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateY(41px);
+  }
+}
+
+.wire-pulse {
+  animation: wire-pulse 1.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
 /*
  * Sections fade up as they scroll into view, driven by scroll position rather
  * than script, so nothing is ever hidden when JavaScript is off. Browsers
@@ -123,7 +145,8 @@ html {
 @media (prefers-reduced-motion: reduce) {
   .rise,
   .arrive,
-  .stack-in {
+  .stack-in,
+  .wire-pulse {
     animation: none;
   }
 

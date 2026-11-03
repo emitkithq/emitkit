@@ -1,4 +1,5 @@
 import { authClient, unwrap } from "@app/lib/auth-client";
+import { signedOAuthQuery } from "@app/lib/oauth";
 import { orpc } from "@app/lib/rpc";
 import {
   authQueryKeys,
@@ -58,7 +59,13 @@ export const leaveGuestAuthPage = async (
   href: string
 ): Promise<void> => {
   const url = new URL(href, window.location.origin);
-  if (!GUEST_AUTH_PATHS.has(path) || isReauthenticationSignInURL(url)) {
+  // An OAuth app asked for a fresh sign-in (`prompt=login`, switching
+  // account): the provider sent the signed request here on purpose.
+  if (
+    !GUEST_AUTH_PATHS.has(path) ||
+    isReauthenticationSignInURL(url) ||
+    signedOAuthQuery(url.search)
+  ) {
     return;
   }
   // Asked fresh and kept out of the query cache: a `null` cached here would

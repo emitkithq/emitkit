@@ -15,6 +15,10 @@ export class EventsQueue extends Context.Service<
       message: QueueMessage,
       options?: { readonly delaySeconds?: number }
     ) => Effect.Effect<void, InfrastructureError>;
+    /** Sends up to 100 messages (and 256 KB) in one call. */
+    readonly sendBatch: (
+      messages: readonly QueueMessage[]
+    ) => Effect.Effect<void, InfrastructureError>;
   }
 >()("emitkit/platform/EventsQueue") {
   static readonly layer = Layer.effect(
@@ -30,7 +34,16 @@ export class EventsQueue extends Context.Service<
           try: () => env.EVENTS_QUEUE.send(message, options),
         });
       });
-      return EventsQueue.of({ send });
+      const sendBatch = Effect.fn("EventsQueue.sendBatch")(function* (
+        messages: readonly QueueMessage[]
+      ) {
+        yield* Effect.tryPromise({
+          catch: infrastructure("queue.sendBatch"),
+          try: () =>
+            env.EVENTS_QUEUE.sendBatch(messages.map((body) => ({ body }))),
+        });
+      });
+      return EventsQueue.of({ send, sendBatch });
     })
   );
 }

@@ -1,4 +1,5 @@
 import { SiteLayout } from "@www/components/site-layout";
+import { AgentEvents } from "@www/landing/agent-events";
 import { ClosingCallToAction } from "@www/landing/closing-cta";
 import { Developers } from "@www/landing/developers";
 import { Faq } from "@www/landing/faq";
@@ -12,6 +13,7 @@ export const LandingPage = () => (
     <Hero />
     <HowItWorks />
     <Developers />
+    <AgentEvents />
     <PushSection />
     <Pricing />
     <Faq />

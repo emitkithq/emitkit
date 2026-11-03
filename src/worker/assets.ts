@@ -142,13 +142,34 @@ const serveFile = async (
   });
 };
 
+/**
+ * The dashboard is never shown inside another site's frame. Above all the
+ * OAuth consent screen: any app can register itself, so a framed consent page
+ * could trick someone into clicking Authorize.
+ */
+const withoutFraming = (response: Response, surface: StaticSurface) => {
+  if (
+    surface !== "app" ||
+    !(response.headers.get("content-type") ?? "").includes("text/html")
+  ) {
+    return response;
+  }
+  const headers = new Headers(response.headers);
+  headers.set("Content-Security-Policy", "frame-ancestors 'none'");
+  headers.set("X-Frame-Options", "DENY");
+  return new Response(response.body, { headers, status: response.status });
+};
+
 export const serveStatic = async (
   request: Request,
   env: Env,
   surface: StaticSurface
 ) =>
   withRuntimeConfig(
-    withCharset(await serveFile(request, env, surface)),
+    withoutFraming(
+      withCharset(await serveFile(request, env, surface)),
+      surface
+    ),
     env,
     surface
   );
