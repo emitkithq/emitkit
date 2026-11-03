@@ -51,11 +51,13 @@ Workers Builds is Cloudflare's Git integration: a GitHub or GitLab app that buil
 | Repository | your EmitKit repository, production branch `main` |
 | Build command | `pnpm build` |
 | Deploy command | `pnpm deploy:ci` |
-| Non-production branch builds | on, version command `pnpm ci:check` (lint, typecheck and a state check: proves the token reaches the state store before `main` deploys) |
+| Non-production branch builds | off for a public repository (see below) |
 | Build variables | `CLOUDFLARE_ACCOUNT_ID`, `PNPM_VERSION=12.4.1`, `EMITKIT_DOMAIN`, plus any other `EMITKIT_*` settings from [Configuration](/self-hosting/configuration) (and `DOCS_SITE_URL` with a site host) |
 | Build secrets | `EMITKIT_DEPLOY_TOKEN`: the deploy token |
 
-Leave the build token (API token) on Cloudflare's generated one: it only starts the build. It covers Workers, KV and R2, which is not enough for this stack, so `pnpm ci:check` and `pnpm deploy:ci` hand `EMITKIT_DEPLOY_TOKEN` to Alchemy as `CLOUDFLARE_API_TOKEN`. Don't name the build secret `CLOUDFLARE_API_TOKEN`: Workers Builds then uses it as the build token and fails with "The build token selected for this build has been deleted or rolled". The build image defaults to pnpm 10, so `PNPM_VERSION` pins the version from `packageManager`.
+Leave the build token (API token) on Cloudflare's generated one: it only starts the build. It covers Workers, KV and R2, which is not enough for this stack, so `pnpm deploy:ci` hands `EMITKIT_DEPLOY_TOKEN` to Alchemy as `CLOUDFLARE_API_TOKEN`. Don't name the build secret `CLOUDFLARE_API_TOKEN`: Workers Builds then uses it as the build token and fails with "The build token selected for this build has been deleted or rolled". The build image defaults to pnpm 10, so `PNPM_VERSION` pins the version from `packageManager`.
+
+Build secrets reach every build, and a branch build runs whatever scripts that branch's `package.json` holds. On a public repository, pull requests from forks could then read `EMITKIT_DEPLOY_TOKEN`, so keep non-production builds off there. On a private repository you can turn them on with the version command `pnpm ci:check` (lint, typecheck and a state check that proves the token reaches the state store before `main` deploys).
 
 Do not set the version command to `wrangler preview` or switch to Worker Previews: `wrangler.jsonc` names the production queue and dataset, so a branch preview would write into production.
 

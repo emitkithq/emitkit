@@ -45,9 +45,9 @@ Read from the environment of `alchemy deploy`, usually `.env.local` (gitignored)
 Create a custom account API token scoped to the account and the zone:
 
 - Account: Workers Scripts Edit, D1 Edit, Queues Edit, Workers AI Read, Email Sending Edit, Account API Tokens Edit, Account Settings Read, Secrets Store Edit.
-- Zone: Zone Read, DNS Edit, Workers Routes Edit, SSL and Certificates Edit, Single Redirect Edit.
+- Zone: Zone Read, DNS Edit, Workers Routes Edit, SSL and Certificates Edit, Dynamic URL Redirects Edit (formerly Single Redirect).
 
-"Account API Tokens Edit" lets the stack mint the Worker's read-only Analytics Engine token (`<name>-analytics-read`); leave it out with `EMITKIT_EVENT_STORE=d1`. "Workers AI Read" can go with `EMITKIT_AI=false`, and "Single Redirect Edit" is only used for the redirect hosts of a site. "Secrets Store Edit" lets Alchemy reach its state store, whose bearer token lives in the account Secrets Store.
+"Account API Tokens Edit" lets the stack mint the Worker's read-only Analytics Engine token (`<name>-analytics-read`); leave it out with `EMITKIT_EVENT_STORE=d1`. "Workers AI Read" can go with `EMITKIT_AI=false`, and "Dynamic URL Redirects Edit" is only used for the redirect hosts of a site. "Secrets Store Edit" lets Alchemy reach its state store, whose bearer token lives in the account Secrets Store.
 
 ## Worker variables and secrets
 
