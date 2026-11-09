@@ -100,7 +100,7 @@ def emitkit(request):
 
 | Request | Body | Reply |
 | --- | --- | --- |
-| Verification, at most once a day per key and URL | `{"type": "verification", "challenge": "…"}`, `webhook-id: msg_verification_…` | `2xx` with `{"challenge": "…"}` |
+| Verification, on a subscribe or refresh; answer every one | `{"type": "verification", "challenge": "…"}`, `webhook-id: msg_verification_…` | `2xx` with `{"challenge": "…"}` |
 | An event | `{"eventId", "name": "event.created", "timestamp", "data", "cursor": null}`, `webhook-id` = `eventId` | `2xx` |
 
 Both are signed with the subscription's secret and carry

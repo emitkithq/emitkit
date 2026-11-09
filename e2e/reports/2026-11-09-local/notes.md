@@ -13,6 +13,8 @@ Scenario 23 gained tests, written before the fixes:
 - A huge reply is not read whole. Restoring `response.text()` made this test fail with all 256 MiB read, so it does catch the bug.
 - `events/list` is empty for a key without `events:read`. No key like this can be made through the product today, so the test narrows one in the local D1.
 
+After this run, only documentation wording and the huge-reply test's limit changed. That test was re-run on its own and passed.
+
 ## Not covered
 
 - ChatGPT, Claude and Claude Code need the public hosts and weren't tried.

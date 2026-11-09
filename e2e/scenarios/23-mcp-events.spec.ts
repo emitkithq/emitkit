@@ -108,6 +108,8 @@ interface Receiver {
 
 /** How much the `huge` receiver offers: far more than the Worker should read. */
 const HUGE_REPLY_BYTES = 256 * 1024 * 1024;
+/** The Worker reads 4 KB; the rest of this allows for socket buffers. */
+const HUGE_REPLY_WRITE_LIMIT = 8 * 1024 * 1024;
 let hugeBytesWritten = 0;
 
 const writeHugeReply = (res: ServerResponse) => {
@@ -700,13 +702,14 @@ test.describe("delivery", () => {
   });
 
   test("a receiver's huge reply is not read whole", async () => {
+    hugeBytesWritten = 0;
     receiver.behaviour.set("/huge", "huge");
     const refused = await subscribe(agentKey, "/huge", newSecret());
     expect(refused.body.error).toMatchObject({
       code: -32_015,
       data: { reason: "challenge_failed" },
     });
-    expect(hugeBytesWritten).toBeLessThan(HUGE_REPLY_BYTES);
+    expect(hugeBytesWritten).toBeLessThan(HUGE_REPLY_WRITE_LIMIT);
   });
 
   test("a verification is only trusted for a bounded time", async () => {
