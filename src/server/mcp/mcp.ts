@@ -439,7 +439,7 @@ export class McpServer extends Context.Service<
         });
       });
 
-      const eventsCall = Effect.fn("McpServer.events")(function* (
+      const eventsCall = Effect.fn("McpServer.eventsCall")(function* (
         principal: Principal,
         rpc: JsonRpcRequest,
         operation: "subscribe" | "unsubscribe"
@@ -521,7 +521,13 @@ export class McpServer extends Context.Service<
             );
           }
           case "events/list": {
-            return Effect.succeed(ok({ events: EVENT_DEFINITIONS }));
+            return Effect.succeed(
+              ok({
+                events: Result.isSuccess(subscriberOf(principal))
+                  ? EVENT_DEFINITIONS
+                  : [],
+              })
+            );
           }
           case "events/subscribe": {
             return eventsCall(principal, rpc, "subscribe");

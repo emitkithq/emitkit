@@ -183,6 +183,10 @@ const decodeStoredArguments = Schema.decodeUnknownOption(
   Schema.fromJsonString(EventCreatedArguments)
 );
 const decodeMetadata = Schema.decodeUnknownOption(Schema.fromJsonString(Json));
+const decodeChallengeReply = Schema.decodeUnknownOption(
+  Schema.fromJsonString(Schema.Struct({ challenge: Schema.String })),
+  { onExcessProperty: "error" }
+);
 
 /** Sorted keys and no absent values, so equal filters compare equal. */
 const canonicalArguments = (args: EventCreatedArguments) => {
@@ -215,7 +219,9 @@ const MAX_TTL_MS = 7 * DEFAULT_TTL_MS;
 const MIN_TTL_MS = MINUTE_MS;
 /** How long a replaced signing secret keeps signing alongside the new one. */
 const ROTATION_WINDOW_MS = 60 * MINUTE_MS;
-const MAX_SUBSCRIPTIONS_PER_KEY = 25;
+/** How long a passed handshake covers a principal's callback URL. */
+const VERIFICATION_TTL_MS = 24 * 60 * MINUTE_MS;
+const MAX_SUBSCRIPTIONS_PER_PRINCIPAL = 25;
 /** Receivers may reject larger bodies with 413. */
 const MAX_DELIVERY_BYTES = 256 * 1024;
 /** Cloudflare Queues: at most 100 messages and 256 KB per batch. */
@@ -240,6 +246,7 @@ interface SubscriptionRow {
   readonly secret: string;
   readonly previous_secret: string | null;
   readonly previous_secret_until: string | null;
+  readonly verified_at: string | null;
   readonly last_delivery_at: string | null;
   readonly last_error: string | null;
 }
@@ -270,7 +277,7 @@ const batches = (messages: readonly McpDeliveryMessage[]) => {
   return result;
 };
 
-/** Deterministic over (API key, callback URL, event name, canonical arguments). */
+/** Deterministic over (principal, callback URL, event name, canonical arguments). */
 const subscriptionId = (
   principal: Subscriber,
   url: string,
@@ -350,7 +357,8 @@ export class McpEvents extends Context.Service<
       /**
        * Proves the receiver asked for these deliveries: a signed
        * `verification` envelope whose single-use challenge must come back
-       * in a 2xx reply (as `{"challenge": …}` or the bare value).
+       * in a 2xx reply as exactly `{"challenge": …}`, so a receiver that
+       * reflects any request body doesn't pass.
        */
       const verify = Effect.fn("McpEvents.verify")(function* (
         id: string,
@@ -386,11 +394,9 @@ export class McpEvents extends Context.Service<
         if (reply.status < 200 || reply.status >= 300) {
           return yield* verificationFailure("challenge_failed");
         }
-        const echoed = Schema.decodeUnknownOption(
-          Schema.fromJsonString(Schema.Struct({ challenge: Schema.String }))
-        )(reply.text).pipe(
+        const echoed = decodeChallengeReply(reply.text).pipe(
           Option.map((body) => body.challenge),
-          Option.getOrElse(() => reply.text.trim())
+          Option.getOrElse(() => "")
         );
         if (!constantTimeEqual(echoed, challenge)) {
           return yield* verificationFailure("challenge_failed");
@@ -437,6 +443,38 @@ export class McpEvents extends Context.Service<
         const [existing] = yield* sql<SubscriptionRow>`
           select * from mcp_subscription where id = ${id} and principal_id = ${principal.id}
         `.pipe(Effect.mapError(infrastructure("mcpEvents.find")));
+        const [siblings] = yield* sql<{
+          readonly total: number;
+          readonly last_verified: string | null;
+        }>`
+          select count(*) as total, max(case when url = ${url} then verified_at end) as last_verified
+          from mcp_subscription where principal_id = ${principal.id}
+        `.pipe(Effect.mapError(infrastructure("mcpEvents.count")));
+        if (
+          !existing &&
+          (siblings?.total ?? 0) >= MAX_SUBSCRIPTIONS_PER_PRINCIPAL
+        ) {
+          return yield* new McpEventsError({
+            code: EventsErrorCode.ResourceExhausted,
+            data: {
+              limit: "subscriptions",
+              max: MAX_SUBSCRIPTIONS_PER_PRINCIPAL,
+            },
+            message: `An API key or connected app can hold ${MAX_SUBSCRIPTIONS_PER_PRINCIPAL} subscriptions`,
+          });
+        }
+        // A recent handshake for this principal and URL is reused, keeping its
+        // own time so that reuse can't extend it. Otherwise verify, on a
+        // refresh too.
+        const lastVerified = siblings?.last_verified ?? null;
+        let verifiedAt = lastVerified;
+        if (
+          lastVerified === null ||
+          lastVerified <= toIso(nowMs - VERIFICATION_TTL_MS)
+        ) {
+          yield* verify(id, url, secret);
+          verifiedAt = now;
+        }
 
         if (existing) {
           const rotated = existing.secret !== secret;
@@ -446,29 +484,11 @@ export class McpEvents extends Context.Service<
               previous_secret = ${rotated ? existing.secret : existing.previous_secret},
               previous_secret_until = ${rotated ? toIso(nowMs + ROTATION_WINDOW_MS) : existing.previous_secret_until},
               refresh_before = ${refreshBefore},
+              verified_at = ${verifiedAt},
               updated_at = ${now}
             where id = ${id}
           `.pipe(Effect.mapError(infrastructure("mcpEvents.refresh")));
         } else {
-          const siblings = yield* sql<{
-            readonly total: number;
-            readonly same_url: number;
-          }>`
-            select count(*) as total, coalesce(sum(url = ${url}), 0) as same_url
-            from mcp_subscription where principal_id = ${principal.id}
-          `.pipe(Effect.mapError(infrastructure("mcpEvents.count")));
-          const [counts] = siblings;
-          if ((counts?.total ?? 0) >= MAX_SUBSCRIPTIONS_PER_KEY) {
-            return yield* new McpEventsError({
-              code: EventsErrorCode.ResourceExhausted,
-              data: { limit: "subscriptions", max: MAX_SUBSCRIPTIONS_PER_KEY },
-              message: `An API key or connected app can hold ${MAX_SUBSCRIPTIONS_PER_KEY} subscriptions`,
-            });
-          }
-          // A callback URL this principal already verified doesn't need a new handshake.
-          if ((counts?.same_url ?? 0) === 0) {
-            yield* verify(id, url, secret);
-          }
           yield* sql`
             insert into mcp_subscription ${sql.insert({
               principal_id: principal.id,
@@ -482,8 +502,9 @@ export class McpEvents extends Context.Service<
               secret,
               updated_at: now,
               url,
+              verified_at: verifiedAt,
             })}
-            on conflict (id) do update set secret = excluded.secret, refresh_before = excluded.refresh_before, updated_at = excluded.updated_at
+            on conflict (id) do update set secret = excluded.secret, refresh_before = excluded.refresh_before, verified_at = excluded.verified_at, updated_at = excluded.updated_at
           `.pipe(Effect.mapError(infrastructure("mcpEvents.insert")));
         }
         return {

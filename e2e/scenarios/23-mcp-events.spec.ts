@@ -1,7 +1,8 @@
+import { execFileSync } from "node:child_process";
 import { createHmac, randomBytes } from "node:crypto";
 import { once } from "node:events";
 import { createServer } from "node:http";
-import type { IncomingHttpHeaders, Server } from "node:http";
+import type { IncomingHttpHeaders, Server, ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
 import { setTimeout as sleep } from "node:timers/promises";
 
@@ -26,7 +27,12 @@ import type { APIRequestContext } from "@playwright/test";
  *   hex), local names written with a trailing dot, credentials in the URL, or
  *   a malformed `whsec_` secret.
  * - A callback starts receiving data without proving it wants it: the
- *   challenge isn't sent, isn't signed, or a wrong echo is accepted.
+ *   challenge isn't sent, isn't signed, or a wrong echo is accepted (a
+ *   receiver that reflects any request body proves nothing).
+ * - A verification is trusted for ever, so a callback whose domain changed
+ *   hands keeps receiving events.
+ * - A receiver's huge reply is read whole into the Worker's memory.
+ * - `events/list` offers an event to a credential that can't subscribe to it.
  * - A redirect is followed, handing the handshake or an event to another URL.
  * - The subscribe result carries fields the spec doesn't define.
  * - Subscribing twice creates two subscriptions (duplicate deliveries), or a
@@ -77,10 +83,17 @@ interface Delivery {
   readonly json: Record<string, unknown>;
 }
 
-/** `fail-once` answers 500 to the first event it gets, then 2xx; `redirect` sends everything to `/redirected`. */
+/**
+ * `fail-once` answers 500 to the first event it gets, then 2xx; `redirect`
+ * sends everything to `/redirected`; `reflect` answers with the request body;
+ * `bare-echo` answers with the challenge alone; `huge` streams an endless reply.
+ */
 type Behaviour =
   | "echo"
   | "wrong-echo"
+  | "reflect"
+  | "bare-echo"
+  | "huge"
   | "fail"
   | "fail-once"
   | "gone"
@@ -92,6 +105,26 @@ interface Receiver {
   behaviour: Map<string, Behaviour>;
   close: () => Promise<void>;
 }
+
+/** How much the `huge` receiver offers: far more than the Worker should read. */
+const HUGE_REPLY_BYTES = 256 * 1024 * 1024;
+let hugeBytesWritten = 0;
+
+const writeHugeReply = (res: ServerResponse) => {
+  const chunk = Buffer.alloc(64 * 1024, "x");
+  res.writeHead(200, { "content-type": "application/json" });
+  const write = () => {
+    while (!res.destroyed && hugeBytesWritten < HUGE_REPLY_BYTES) {
+      hugeBytesWritten += chunk.length;
+      if (!res.write(chunk)) {
+        res.once("drain", write);
+        return;
+      }
+    }
+    res.end();
+  };
+  write();
+};
 
 const startReceiver = async (): Promise<Receiver> => {
   const deliveries: Delivery[] = [];
@@ -120,6 +153,18 @@ const startReceiver = async (): Promise<Receiver> => {
       }
       if (mode === "redirect") {
         res.writeHead(307, { location: "/redirected" }).end();
+        return;
+      }
+      if (mode === "reflect") {
+        res.writeHead(200, { "content-type": "application/json" }).end(body);
+        return;
+      }
+      if (mode === "bare-echo") {
+        res.writeHead(200).end(String(json.challenge));
+        return;
+      }
+      if (mode === "huge") {
+        writeHugeReply(res);
         return;
       }
       res.writeHead(200, { "content-type": "application/json" });
@@ -183,6 +228,14 @@ const waitForDelivery = async (path: string, eventId: string) => {
 
 /** Queue batches settle within a few seconds locally. */
 const settle = () => sleep(6000);
+
+/** State no public call can arrange (an old handshake, a narrowed key); local D1 only. */
+const d1 = (sql: string) =>
+  execFileSync(
+    "pnpm",
+    ["exec", "wrangler", "d1", "execute", "DB", "--local", "--command", sql],
+    { stdio: "pipe" }
+  );
 
 // ---------------------------------------------------------------------------
 // Modern MCP requests.
@@ -420,6 +473,20 @@ test("events/list describes event.created for webhook delivery", async () => {
   expect(created?.payloadSchema.properties).toHaveProperty("channel");
 });
 
+test("events/list offers nothing to a key that can't read events", async () => {
+  test.skip(!isDevServer, "narrows a key in the local D1");
+  const name = `Write only ${Date.now()}`;
+  const writeOnly = await session.rpc<{ secret: string }>("apiKeys/create", {
+    name,
+    projectId,
+  });
+  d1(
+    `update apikey set metadata = json_set(metadata, '$.scopes', json('["events:write"]')) where name = '${name}'`
+  );
+  const { body } = await modern(writeOnly.secret, "events/list");
+  expect(body.result?.events).toEqual([]);
+});
+
 test("unsafe or malformed subscriptions are refused", async () => {
   for (const url of [
     "http://example.com/hook",
@@ -620,6 +687,62 @@ test.describe("delivery", () => {
     expect(failing.body.error).toMatchObject({
       code: -32_015,
       data: { reason: "http_5xx" },
+    });
+    // Reflecting the request proves nothing, and only the documented reply counts.
+    for (const mode of ["reflect", "bare-echo"] as const) {
+      receiver.behaviour.set(`/${mode}`, mode);
+      const refused = await subscribe(agentKey, `/${mode}`, newSecret());
+      expect(refused.body.error, mode).toMatchObject({
+        code: -32_015,
+        data: { reason: "challenge_failed" },
+      });
+    }
+  });
+
+  test("a receiver's huge reply is not read whole", async () => {
+    receiver.behaviour.set("/huge", "huge");
+    const refused = await subscribe(agentKey, "/huge", newSecret());
+    expect(refused.body.error).toMatchObject({
+      code: -32_015,
+      data: { reason: "challenge_failed" },
+    });
+    expect(hugeBytesWritten).toBeLessThan(HUGE_REPLY_BYTES);
+  });
+
+  test("a verification is only trusted for a bounded time", async () => {
+    const path = "/stale";
+    const url = `${receiver.origin}${path}`;
+    const staleSecret = newSecret();
+    const verifications = () =>
+      receiver.deliveries.filter(
+        (delivery) =>
+          delivery.path === path && delivery.json.type === "verification"
+      ).length;
+    const age = () =>
+      d1(
+        `update mcp_subscription set verified_at = '2020-01-01T00:00:00.000Z' where url = '${url}'`
+      );
+
+    await subscribe(agentKey, path, staleSecret, { channel: "stale" });
+    await subscribe(agentKey, path, staleSecret, { channel: "stale-two" });
+    expect(verifications(), "a recent handshake is reused").toBe(1);
+
+    age();
+    await subscribe(agentKey, path, staleSecret, { channel: "stale-three" });
+    expect(verifications(), "a new filter after it went stale").toBe(2);
+
+    age();
+    await subscribe(agentKey, path, staleSecret, { channel: "stale" });
+    expect(verifications(), "a refresh after it went stale").toBe(3);
+
+    age();
+    receiver.behaviour.set(path, "wrong-echo");
+    const refused = await subscribe(agentKey, path, staleSecret, {
+      channel: "stale",
+    });
+    expect(refused.body.error).toMatchObject({
+      code: -32_015,
+      data: { reason: "challenge_failed" },
     });
   });
 

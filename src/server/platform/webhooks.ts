@@ -17,7 +17,7 @@ const MIN_SECRET_BYTES = 24;
 const MAX_SECRET_BYTES = 64;
 const TIMEOUT_MS = 10_000;
 /** Enough of a receiver's reply to read a verification echo. */
-const MAX_REPLY_CHARS = 4096;
+const MAX_REPLY_BYTES = 4096;
 
 export interface SignedPost {
   readonly url: string;
@@ -169,6 +169,28 @@ const callbackProblem = (url: string, allowLoopback: boolean) => {
   return null;
 };
 
+/** The start of a reply, without buffering a body the receiver controls. */
+const readReply = async (response: Response) => {
+  const reader = response.body?.getReader();
+  if (!reader) {
+    return "";
+  }
+  const decoder = new TextDecoder();
+  let text = "";
+  let remaining = MAX_REPLY_BYTES;
+  while (remaining > 0) {
+    // oxlint-disable-next-line no-await-in-loop -- a stream is read in order
+    const { done, value } = await reader.read();
+    if (done) {
+      return text;
+    }
+    text += decoder.decode(value.subarray(0, remaining), { stream: true });
+    remaining -= value.length;
+  }
+  await reader.cancel();
+  return text;
+};
+
 type TransportReason = WebhookTransportError["reason"];
 
 /** Classifies a fetch failure from its message. */
@@ -249,10 +271,9 @@ export class Webhooks extends Context.Service<
               redirect: "manual",
               signal: AbortSignal.timeout(TIMEOUT_MS),
             });
-            const text = await response.text();
             return {
               status: response.status,
-              text: text.slice(0, MAX_REPLY_CHARS),
+              text: await readReply(response),
             };
           },
         });

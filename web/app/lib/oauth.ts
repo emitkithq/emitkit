@@ -63,7 +63,7 @@ export const rememberedOAuthQuery = (): string | undefined => {
 };
 
 /** Better Auth endpoints that sign someone in and should resume the flow. */
-const SIGN_IN_PATHS = ["/sign-in/", "/sign-up/", "/magic-link", "/dev/sign-in"];
+const SIGN_IN_PATHS = ["/sign-in/", "/sign-up/", "/dev/sign-in"];
 
 /**
  * A Better Auth fetch plugin that adds the remembered signed query to sign-in

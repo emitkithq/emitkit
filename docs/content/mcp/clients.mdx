@@ -35,7 +35,7 @@ Most clients accept a JSON server entry like this:
 }
 ```
 
-A request without credentials is rejected with `401` and a
-`WWW-Authenticate` header that points OAuth clients at EmitKit's sign-in. A wrong key still lets the
-client connect and list tools, because EmitKit checks the key when a tool is
-called: if the first tool call returns an authentication error, check the key.
+A request without credentials, or with a wrong key, is rejected with `401` and
+a `WWW-Authenticate` header that points OAuth clients at EmitKit's sign-in.
+EmitKit checks the credential on every request, so a wrong key already fails
+when the client connects: if it can't connect, check the key.

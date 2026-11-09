@@ -30,7 +30,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     question: "Is EmitKit an analytics or logging tool?",
   },
   {
-    answer: `Yes. Add the MCP server at ${MCP_ENDPOINT} to Claude, Cursor or any other MCP client, with an EmitKit API key as a bearer token. The agent gets createEvent, identifyUser and deleteIdentity tools, so it can tell you when a task is done, when it needs your approval or when it could not help a customer.`,
+    answer: `Yes. Add the MCP server at ${MCP_ENDPOINT} to Claude, Cursor or any other MCP client, and sign in or use an EmitKit API key as a bearer token. The agent gets createEvent, identifyUser and deleteIdentity tools, so it can tell you when a task is done, when it needs your approval or when it could not help a customer.`,
     id: "agents",
     question: "Can AI agents send events?",
   },
@@ -64,7 +64,7 @@ export const FAQ_ITEMS: FaqItem[] = [
   },
   {
     answer:
-      "No. EmitKit delivers events to its own feed and as push notifications. There is no integration to configure and no shared chat channel to mute.",
+      "Not to Slack or Discord. EmitKit delivers events to its own feed and as push notifications, so there is no shared chat channel to mute. The one webhook is for agents: with MCP Events, an agent subscribes over MCP and receives new events at its HTTPS endpoint as signed webhooks.",
     id: "integrations",
     question: "Can EmitKit post to Slack, Discord or webhooks?",
   },

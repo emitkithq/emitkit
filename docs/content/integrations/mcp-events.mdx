@@ -175,8 +175,9 @@ Send it with the headers `MCP-Protocol-Version: 2026-07-28` and
   <Step title="Answer the verification request">
     Before the subscription exists, EmitKit sends a signed
     `{"type": "verification", "challenge": "…"}` to your URL. Reply `2xx` with
-    `{"challenge": "<the same value>"}`. A key verifies each callback URL
-    once; later subscriptions to the same URL skip the handshake.
+    exactly `{"challenge": "<the same value>"}`. A verified callback URL skips
+    the handshake for 24 hours, for that key or connected app. After that, the
+    next subscribe or refresh verifies it again.
   </Step>
   <Step title="Keep the subscription id">
 
