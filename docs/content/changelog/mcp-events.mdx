@@ -11,11 +11,11 @@ changelog:
   `event.created`, filtered by channel, tags or user. EmitKit then posts each
   matching event to the agent's `https` callback as a
   [Standard Webhooks](https://www.standardwebhooks.com) request, after a
-  one-time verification handshake. See [MCP Events](/integrations/mcp-events).
+  signed verification handshake. See [MCP Events](/integrations/mcp-events).
 - **No feedback loops.** Events created with an agent's own API key are never
   delivered back to that key's subscriptions.
 - **MCP protocol 2026-07-28.** The server answers `server/discover` and
-  per-request metadata. Clients on earlier versions keep using `initialize`.
+  per-request metadata. Clients on earlier versions keep using `initialize`, and can use MCP Events too.
 - **New Integrations docs**, including how to
   [build a webhook receiver](/integrations/webhook-receiver).
 - **Sign in from ChatGPT and Claude.** MCP clients can now connect with OAuth

@@ -20,8 +20,8 @@ import type { APIRequestContext } from "@playwright/test";
  *   `events` capability, header/body mismatches accepted, unknown versions
  *   answered instead of rejected with the supported list.
  * - `events/list` drifts from what `events/subscribe` accepts, answers without
- *   a valid credential, or MCP Events are served to session-era clients (they
- *   need MCP 2.0).
+ *   a valid credential, or session-era clients (`initialize`) can't find or
+ *   use MCP Events.
  * - Unsafe callbacks are stored: plain http, private or loopback addresses
  *   (also as IPv6 that carries IPv4, like 6to4 and Teredo, or in decimal and
  *   hex), local names written with a trailing dot, credentials in the URL, or
@@ -305,6 +305,27 @@ const subscribe = (
     ...extra,
   });
 
+/** A session-era request: no mirrored headers, no `_meta`, errors in a 200. */
+const sessionEra = async (
+  key: string,
+  method: string,
+  params: Record<string, unknown> = {}
+) => {
+  const url = `${target.api}/mcp`;
+  const body = { id: 1, jsonrpc: "2.0", method, params };
+  const response = await recordResponse(
+    "POST",
+    url,
+    body,
+    await context.post(url, {
+      data: body,
+      headers: { authorization: `Bearer ${key}` },
+    })
+  );
+  expect(response.status()).toBe(200);
+  return (await response.json()) as RpcBody;
+};
+
 const createEvent = async (key: string, body: Record<string, unknown>) => {
   const url = `${target.api}/v1/events`;
   const response = await recordResponse(
@@ -559,20 +580,20 @@ test("unsafe or malformed subscriptions are refused", async () => {
   expect(listing.status).toBe(401);
 });
 
-test("session-era clients don't get MCP Events", async () => {
-  const url = `${target.api}/mcp`;
-  const body = { id: 1, jsonrpc: "2.0", method: "events/list", params: {} };
-  const response = await recordResponse(
-    "POST",
-    url,
-    body,
-    await context.post(url, {
-      data: body,
-      headers: { authorization: `Bearer ${agentKey}` },
-    })
-  );
-  expect(response.status()).toBe(200);
-  expect(await response.json()).toMatchObject({ error: { code: -32_601 } });
+test("session-era clients find MCP Events through initialize", async () => {
+  const initialized = await sessionEra(agentKey, "initialize", {
+    capabilities: {},
+    clientInfo: { name: "e2e", version: "1" },
+    protocolVersion: "2025-03-26",
+  });
+  expect(initialized.result?.capabilities).toMatchObject({
+    events: {},
+    tools: {},
+  });
+  const listing = await sessionEra(agentKey, "events/list");
+  const events = listing.result?.events as { name: string }[];
+  expect(events.map((event) => event.name)).toEqual(["event.created"]);
+  expect(listing.result).not.toHaveProperty("resultType");
 });
 
 test.describe("delivery", () => {
@@ -634,6 +655,45 @@ test.describe("delivery", () => {
     expect(
       receiver.deliveries.filter((delivery) => delivery.path === "/payments")
     ).toHaveLength(1);
+  });
+
+  test("a session-era client subscribes and gets deliveries", async () => {
+    const eraSecret = newSecret();
+    const delivery = {
+      mode: "webhook",
+      secret: eraSecret,
+      url: `${receiver.origin}/session-era`,
+    };
+    const subscribed = await sessionEra(agentKey, "events/subscribe", {
+      arguments: { channel: "session-era" },
+      cursor: null,
+      delivery,
+      name: "event.created",
+    });
+    expect(subscribed.error).toBeUndefined();
+    expect(subscribed.result?.id).toMatch(/^sub_[0-9a-f]{32}$/u);
+
+    const eventId = await createEvent(appKey, {
+      channelName: "session-era",
+      title: "Heard over initialize",
+    });
+    const received = await waitForDelivery("/session-era", eventId);
+    expect(validSignatures(received, eraSecret)).toHaveLength(1);
+
+    const unknown = await sessionEra(agentKey, "events/subscribe", {
+      arguments: {},
+      delivery,
+      name: "not.an.event",
+    });
+    expect(unknown.error?.code).toBe(-32_011);
+
+    const removed = await sessionEra(agentKey, "events/unsubscribe", {
+      arguments: { channel: "session-era" },
+      delivery: { url: delivery.url },
+      name: "event.created",
+    });
+    expect(removed.error).toBeUndefined();
+    expect(removed.result).toEqual({});
   });
 
   test("redirects are never followed", async () => {

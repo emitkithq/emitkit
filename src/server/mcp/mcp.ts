@@ -56,8 +56,7 @@ const META_VERSION = "io.modelcontextprotocol/protocolVersion";
 
 const SERVER_INFO = { name: "emitkit", title: "EmitKit", version: "3.0.0" };
 const INSTRUCTIONS =
-  "Send events to the project bound to your API key, and ask people for decisions: an event with buttons or fields waits for an answer on their phone (read it with getEvent). Also lists recent events and channels, and manages identities.";
-const DISCOVER_INSTRUCTIONS = `${INSTRUCTIONS} Subscribe to event.created to hear about new events by webhook.`;
+  "Send events to the project bound to your API key, and ask people for decisions: an event with buttons or fields waits for an answer on their phone (read it with getEvent). Also lists recent events and channels, and manages identities. Subscribe to event.created to hear about new events by webhook.";
 
 const JsonRpcRequest = Schema.Struct({
   id: Schema.optional(
@@ -391,10 +390,10 @@ const refused = (
  * Both protocol eras are served. A request whose `params._meta` carries a
  * protocol version (or whose `MCP-Protocol-Version` isn't a session-era
  * version) is modern (2026-07-28): its mirrored headers are validated, its
- * results carry `resultType`, and it can use `server/discover` and MCP
- * Events (`events/list`, `events/subscribe`, `events/unsubscribe`), which
- * need MCP 2.0. Everything else is answered as before, starting with
- * `initialize`.
+ * results carry `resultType`, and it can use `server/discover`. Everything
+ * else is answered as before, starting with `initialize`. MCP Events
+ * (`events/list`, `events/subscribe`, `events/unsubscribe`) work on both,
+ * and both advertise the `events` capability.
  */
 export class McpServer extends Context.Service<
   McpServer,
@@ -465,10 +464,25 @@ export class McpServer extends Context.Service<
       const shared = (
         principal: Principal,
         rpc: JsonRpcRequest
-      ): Effect.Effect<Reply | null, never, RequestId> => {
+      ): Effect.Effect<Reply | null, InfrastructureError, RequestId> => {
         switch (rpc.method) {
           case "ping": {
             return Effect.succeed(ok({}));
+          }
+          case "events/list": {
+            return Effect.succeed(
+              ok({
+                events: Result.isSuccess(subscriberOf(principal))
+                  ? EVENT_DEFINITIONS
+                  : [],
+              })
+            );
+          }
+          case "events/subscribe": {
+            return eventsCall(principal, rpc, "subscribe");
+          }
+          case "events/unsubscribe": {
+            return eventsCall(principal, rpc, "unsubscribe");
           }
           case "tools/list": {
             return Effect.succeed(ok({ tools: listed(principal) }));
@@ -492,7 +506,7 @@ export class McpServer extends Context.Service<
             PROTOCOL_VERSIONS.find((candidate) => candidate === requested) ??
             "2025-06-18";
           return ok({
-            capabilities: { tools: { listChanged: false } },
+            capabilities: { events: {}, tools: { listChanged: false } },
             instructions: INSTRUCTIONS,
             protocolVersion: version,
             serverInfo: SERVER_INFO,
@@ -503,43 +517,6 @@ export class McpServer extends Context.Service<
           fail(-32_601, `Method not found: ${rpc.method}`)
         );
       });
-
-      /** The methods only MCP 2.0 has: discovery and MCP Events. */
-      const modernOnly = (
-        principal: Principal,
-        rpc: JsonRpcRequest
-      ): Effect.Effect<Reply | null, InfrastructureError> => {
-        switch (rpc.method) {
-          case "server/discover": {
-            return Effect.succeed(
-              ok({
-                _meta: { "io.modelcontextprotocol/serverInfo": SERVER_INFO },
-                capabilities: { events: {}, tools: {} },
-                instructions: DISCOVER_INSTRUCTIONS,
-                supportedVersions: SUPPORTED_VERSIONS,
-              })
-            );
-          }
-          case "events/list": {
-            return Effect.succeed(
-              ok({
-                events: Result.isSuccess(subscriberOf(principal))
-                  ? EVENT_DEFINITIONS
-                  : [],
-              })
-            );
-          }
-          case "events/subscribe": {
-            return eventsCall(principal, rpc, "subscribe");
-          }
-          case "events/unsubscribe": {
-            return eventsCall(principal, rpc, "unsubscribe");
-          }
-          default: {
-            return Effect.succeed(null);
-          }
-        }
-      };
 
       const modern = Effect.fn("McpServer.modern")(function* (
         request: HttpServerRequest.HttpServerRequest,
@@ -575,8 +552,15 @@ export class McpServer extends Context.Service<
             );
           }
         }
+        if (rpc.method === "server/discover") {
+          return ok({
+            _meta: { "io.modelcontextprotocol/serverInfo": SERVER_INFO },
+            capabilities: { events: {}, tools: {} },
+            instructions: INSTRUCTIONS,
+            supportedVersions: SUPPORTED_VERSIONS,
+          });
+        }
         return (
-          (yield* modernOnly(principal, rpc)) ??
           (yield* shared(principal, rpc)) ??
           fail(-32_601, `Method not found: ${rpc.method}`, undefined, 404)
         );

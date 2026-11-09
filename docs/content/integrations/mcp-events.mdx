@@ -12,8 +12,8 @@ matching event to the agent's callback URL as a signed
 [Standard Webhooks](https://www.standardwebhooks.com) request.
 
 It follows the [MCP Events draft](https://github.com/modelcontextprotocol/experimental-ext-triggers-events/blob/main/docs/design-sketch-proposal.md)
-with webhook delivery, on MCP protocol version `2026-07-28`, at the same
-endpoint as the tools:
+with webhook delivery, on MCP protocol version `2026-07-28` and on the earlier
+versions that use `initialize`, at the same endpoint as the tools:
 
 ```text
 https://api.emitkit.com/mcp
@@ -92,10 +92,12 @@ curl https://api.emitkit.com/mcp \
 }
 ```
 
-Clients on older protocol versions still start with `initialize` and keep
-working as before. MCP Events need `2026-07-28`: on an older version,
-`events/*` gets `-32601`. If a header doesn't match the body, EmitKit answers
-`400` with error `-32020`. An unsupported version gets `400` with `-32022` and
+Clients on older protocol versions start with `initialize`, whose capabilities
+list `events` too. They call the same `events/*` methods without the headers
+and `_meta` shown on this page, and errors arrive in an HTTP `200`.
+
+On `2026-07-28`, if a header doesn't match the body, EmitKit answers `400` with
+error `-32020`. An unsupported version gets `400` with `-32022` and
 the supported list, and an unknown method gets `404` with `-32601`.
 
 ## The event: `event.created`
