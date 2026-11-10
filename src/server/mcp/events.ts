@@ -245,6 +245,7 @@ const grantedTtl = (requested: number | null | undefined) => {
 interface SubscriptionRow {
   readonly id: string;
   readonly principal_id: string;
+  readonly organization_id: string;
   readonly arguments: string;
   readonly url: string;
   readonly secret: string;
@@ -564,12 +565,6 @@ export class McpEvents extends Context.Service<
         if (!first) {
           return;
         }
-        if (!(yield* billing.pushAllowed(event.organizationId))) {
-          yield* Effect.logInfo("MCP Events paused by billing", {
-            organizationId: event.organizationId,
-          });
-          return;
-        }
         const body = stringifyJson({
           cursor: null,
           data: {
@@ -632,6 +627,12 @@ export class McpEvents extends Context.Service<
             and ${sql.literal(LIVE_PRINCIPAL)}
         `.pipe(Effect.mapError(infrastructure("mcpEvents.load")));
         if (!row) {
+          return;
+        }
+        if (!(yield* billing.pushAllowed(row.organization_id))) {
+          yield* Effect.logInfo("MCP Events paused by billing", {
+            organizationId: row.organization_id,
+          });
           return;
         }
         const secrets =

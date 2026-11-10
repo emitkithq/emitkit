@@ -276,7 +276,7 @@ X-MCP-Subscription-Id: sub_4f0c9d8e2b7a41d6a9c3e5f7b1d2c3a4
 | `410 Gone` | Deletes the subscription, and doesn't try again. Your next refresh creates it again |
 | Any other `3xx` or `4xx` | Doesn't try again. Redirects are never followed |
 
-Once an event is queued, deliveries are at least once. A retry keeps the same `webhook-id` (the event
+Delivery is best effort. An event can arrive more than once, and it can be missed, because retries stop after the third and nothing replays a missed event. A retry keeps the same `webhook-id` (the event
 id) with a fresh timestamp and signature, so use `webhook-id` to skip
 duplicates. Events can arrive out of order.
 

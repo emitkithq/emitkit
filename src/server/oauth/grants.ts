@@ -58,17 +58,19 @@ export const connectingRoleSql = (column: string) =>
 const RedirectUris = Schema.fromJsonString(Schema.Array(Schema.String));
 const decodeRedirectUris = Schema.decodeUnknownOption(RedirectUris);
 
+/** Where a redirect URI leads: its host, or its scheme for a native app's `com.example.app:/callback`. */
+const redirectTarget = (uri: string) => {
+  const { hostname, protocol } = new URL(uri);
+  return hostname || protocol.replace(/:$/u, "");
+};
+
 /** Every host people can be sent back to: the part of a public client that can be trusted. */
 const redirectHosts = (redirectUris: string | null) => {
   const uris = decodeRedirectUris(redirectUris ?? "").pipe(
     Option.getOrElse((): readonly string[] => [])
   );
   return [
-    ...new Set(
-      uris
-        .filter((uri) => URL.canParse(uri))
-        .map((uri) => new URL(uri).hostname)
-    ),
+    ...new Set(uris.filter((uri) => URL.canParse(uri)).map(redirectTarget)),
   ];
 };
 
@@ -188,6 +190,7 @@ export class OAuthGrants extends Context.Service<
           where c."clientId" = ${claims.clientId} and c."userId" = ${claims.userId}
             and c."referenceId" = ${claims.projectId}
             and cast(strftime('%s', c."createdAt") as integer) <= ${claims.issuedAtSeconds}
+            and exists (select 1 from json_each(c.scopes) where value = ${MCP_SCOPE})
           limit 1
         `.pipe(Effect.mapError(infrastructure("oauthGrants.resolve")));
         const [row] = rows;

@@ -679,6 +679,20 @@ test("a member can't connect, and a demoted owner loses access", async ({
   expect(restored.status).toBe(200);
 });
 
+test("a consent narrowed to leave out mcp cuts off earlier tokens", async () => {
+  test.skip(!isLocal, "changes the consent in the local D1");
+  expect(await statusOf(tokens.access)).toBe(200);
+  const narrow = `update "oauthConsent" set scopes = '["openid"]' where "clientId" = '${clientId}'`;
+  const restore = `update "oauthConsent" set scopes = '["openid","profile","email","offline_access","mcp"]' where "clientId" = '${clientId}'`;
+  d1(narrow);
+  try {
+    expect(await statusOf(tokens.access)).toBe(401);
+  } finally {
+    d1(restore);
+  }
+  expect(await statusOf(tokens.access)).toBe(200);
+});
+
 test("Settings → Connected apps revokes at once", async ({ browser }) => {
   const browserContext = await signedInContext(browser);
   const page = await browserContext.newPage();
