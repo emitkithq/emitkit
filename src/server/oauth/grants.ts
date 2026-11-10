@@ -3,13 +3,12 @@ import type { InfrastructureError } from "@server/errors";
 import type { AccessTokenClaims, RateLimitState } from "@server/platform/auth";
 import { API_KEY_RATE_LIMIT, MCP_SCOPE } from "@server/platform/auth-options";
 import { makeId } from "@server/platform/ids";
-import { toIso } from "@server/platform/time";
 import type {
   OAuthChoices,
   OAuthConnection,
   OAuthOrganizationChoice,
 } from "@shared/rpc/schemas";
-import { Clock, Context, Effect, Layer, Schema } from "effect";
+import { Clock, Context, Effect, Layer, Option, Schema } from "effect";
 import { SqlClient } from "effect/unstable/sql";
 
 /** A live OAuth grant: one user's consent for one app on one project. */
@@ -59,12 +58,19 @@ export const connectingRoleSql = (column: string) =>
 const RedirectUris = Schema.fromJsonString(Schema.Array(Schema.String));
 const decodeRedirectUris = Schema.decodeUnknownOption(RedirectUris);
 
-/** The host people are sent back to: the part of a public client that can be trusted. */
-const redirectHost = (redirectUris: string | null) =>
-  decodeRedirectUris(redirectUris ?? "").pipe(
-    (uris) => (uris._tag === "Some" ? uris.value[0] : undefined),
-    (uri) => (uri && URL.canParse(uri) ? new URL(uri).hostname : null)
+/** Every host people can be sent back to: the part of a public client that can be trusted. */
+const redirectHosts = (redirectUris: string | null) => {
+  const uris = decodeRedirectUris(redirectUris ?? "").pipe(
+    Option.getOrElse((): readonly string[] => [])
   );
+  return [
+    ...new Set(
+      uris
+        .filter((uri) => URL.canParse(uri))
+        .map((uri) => new URL(uri).hostname)
+    ),
+  ];
+};
 
 interface ChoiceRow {
   readonly organization_id: string;
@@ -181,6 +187,7 @@ export class OAuthGrants extends Context.Service<
           join member m on m."organizationId" = p.organization_id and m."userId" = c."userId"
           where c."clientId" = ${claims.clientId} and c."userId" = ${claims.userId}
             and c."referenceId" = ${claims.projectId}
+            and cast(strftime('%s', c."createdAt") as integer) <= ${claims.issuedAtSeconds}
           limit 1
         `.pipe(Effect.mapError(infrastructure("oauthGrants.resolve")));
         const [row] = rows;
@@ -286,7 +293,7 @@ export class OAuthGrants extends Context.Service<
             row.project_name && row.project_deleted_at === null
               ? row.project_name
               : null,
-          redirectHost: redirectHost(row.redirect_uris),
+          redirectHosts: redirectHosts(row.redirect_uris),
         }));
       });
 
@@ -307,11 +314,12 @@ export class OAuthGrants extends Context.Service<
             id: grantId,
           });
         }
-        const now = toIso(yield* Clock.currentTimeMillis);
+        // Deleted, not marked revoked: the provider treats replaying a revoked
+        // token as theft and ends the app's tokens on every project.
         yield* sql`
-          update "oauthRefreshToken" set revoked = ${now}
+          delete from "oauthRefreshToken"
           where "clientId" = ${grant.clientId} and "userId" = ${userId}
-            and "referenceId" is ${grant.referenceId} and revoked is null
+            and "referenceId" is ${grant.referenceId}
         `.pipe(Effect.mapError(infrastructure("oauthGrants.revokeTokens")));
         yield* sql`delete from mcp_subscription where principal_id = ${grantId}`.pipe(
           Effect.mapError(infrastructure("oauthGrants.revokeSubscriptions"))

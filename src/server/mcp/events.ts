@@ -1,3 +1,4 @@
+import { Billing } from "@server/billing/billing";
 import { infrastructure } from "@server/errors";
 import type { InfrastructureError } from "@server/errors";
 import { connectingRoleSql } from "@server/oauth/grants";
@@ -44,14 +45,17 @@ const LIVE_PRINCIPAL = `(
   )
 )`;
 
-/** JSON-RPC error codes of the MCP Events draft. */
+/**
+ * JSON-RPC error codes of the MCP Events draft, except the callback error:
+ * OpenAI's guide, which ChatGPT follows, names -32015 where the draft has -32027.
+ */
 export const EventsErrorCode = {
   CallbackEndpointError: -32_015,
-  Forbidden: -32_012,
+  Forbidden: -32_024,
   InvalidParams: -32_602,
-  NotFound: -32_011,
-  ResourceExhausted: -32_013,
-  Unsupported: -32_014,
+  NotFound: -32_023,
+  ResourceExhausted: -32_025,
+  Unsupported: -32_026,
 };
 
 /** A request `events/*` refuses, carried to the client as a JSON-RPC error. */
@@ -64,7 +68,7 @@ export class McpEventsError extends Schema.TaggedError<McpEventsError>()(
   }
 ) {}
 
-/** A delivery the receiver didn't accept yet (a network failure, 408, 429 or 5xx): retried. */
+/** A delivery the receiver didn't accept yet (a network failure, 408, 425, 429 or 5xx): retried. */
 export class WebhookDeliveryError extends Schema.TaggedError<WebhookDeliveryError>()(
   "WebhookDeliveryError",
   { reason: Schema.String, subscriptionId: Schema.String }
@@ -335,6 +339,7 @@ export class McpEvents extends Context.Service<
       const sql = yield* SqlClient.SqlClient;
       const webhooks = yield* Webhooks;
       const queue = yield* EventsQueue;
+      const billing = yield* Billing;
       const { appUrl } = yield* AppConfig;
 
       /** The event name and filter arguments shared by subscribe and unsubscribe. */
@@ -559,6 +564,12 @@ export class McpEvents extends Context.Service<
         if (!first) {
           return;
         }
+        if (!(yield* billing.pushAllowed(event.organizationId))) {
+          yield* Effect.logInfo("MCP Events paused by billing", {
+            organizationId: event.organizationId,
+          });
+          return;
+        }
         const body = stringifyJson({
           cursor: null,
           data: {
@@ -663,7 +674,12 @@ export class McpEvents extends Context.Service<
           return;
         }
         yield* recordError(row.id, `http_${status}`);
-        if (status === 408 || status === 429 || status >= 500) {
+        if (
+          status === 408 ||
+          status === 425 ||
+          status === 429 ||
+          status >= 500
+        ) {
           return yield* new WebhookDeliveryError({
             reason: `http_${status}`,
             subscriptionId: row.id,

@@ -94,7 +94,9 @@ curl https://api.emitkit.com/mcp \
 
 Clients on older protocol versions start with `initialize`, whose capabilities
 list `events` too. They call the same `events/*` methods without the headers
-and `_meta` shown on this page, and errors arrive in an HTTP `200`.
+and `_meta` shown on this page. Errors from those methods arrive in an HTTP
+`200`. A missing or invalid credential is still `401`, and a spent rate limit
+`429`.
 
 On `2026-07-28`, if a header doesn't match the body, EmitKit answers `400` with
 error `-32020`. An unsupported version gets `400` with `-32022` and
@@ -102,8 +104,8 @@ the supported list, and an unknown method gets `404` with `-32601`.
 
 ## The event: `event.created`
 
-`events/list` describes it. It fires for every event created in the key's
-Project, including events sent with `notify: false`, because `notify` only
+`events/list` describes it. It fires for every event a sender or agent creates
+in the key's Project (a recorded answer to a question doesn't count), including events sent with `notify: false`, because `notify` only
 controls push notifications.
 
 <Tabs>
@@ -270,11 +272,11 @@ X-MCP-Subscription-Id: sub_4f0c9d8e2b7a41d6a9c3e5f7b1d2c3a4
 | Your reply | What EmitKit does |
 | --- | --- |
 | `2xx` | Delivered |
-| `408`, `429`, `5xx`, timeout (10 s) or no connection | Tries again after 10, 20 and 40 seconds, then gives up |
-| `410 Gone` | Deletes the subscription, and doesn't try again |
+| `408`, `425`, `429`, `5xx`, timeout (10 s) or no connection | Tries again after 10, 20 and 40 seconds, then gives up |
+| `410 Gone` | Deletes the subscription, and doesn't try again. Your next refresh creates it again |
 | Any other `3xx` or `4xx` | Doesn't try again. Redirects are never followed |
 
-Deliveries are at least once. A retry keeps the same `webhook-id` (the event
+Once an event is queued, deliveries are at least once. A retry keeps the same `webhook-id` (the event
 id) with a fresh timestamp and signature, so use `webhook-id` to skip
 duplicates. Events can arrive out of order.
 
@@ -290,7 +292,7 @@ agent its own key or connection, and use a different key for your app.
 - The API key or OAuth connection is the subscriber. Revoke or rotate the key,
   revoke the connection, delete its Project, or stop being an owner or admin
   of the organization, and deliveries stop straight away.
-- A key or connection can hold 25 subscriptions. The 26th gets `-32013` with
+- A key or connection can hold 25 subscriptions. The 26th gets `-32025` with
   `data.limit: "subscriptions"`.
 - Subscribing needs a key that can read events: full keys and
   [read-only keys](/api/api-keys) both can.
@@ -306,8 +308,8 @@ agent its own key or connection, and use a different key for your app.
 | Code | Meaning | When |
 | --- | --- | --- |
 | `-32602` | Invalid params | Arguments outside the event's `inputSchema`, a bad URL, or a secret that isn't `whsec_` plus 24 to 64 bytes |
-| `-32011` | Not found | Unknown event name (`data.kind: "event"`) |
-| `-32012` | Forbidden | A key that isn't bound to a Project. A missing or invalid key or token gets HTTP `401` before any method runs, and a spent rate limit HTTP `429` |
-| `-32013` | Resource exhausted | 25 subscriptions reached |
-| `-32014` | Unsupported | A delivery mode other than `webhook` |
+| `-32023` | Not found | Unknown event name (`data.kind: "event"`) |
+| `-32024` | Forbidden | A key that isn't bound to a Project. A missing or invalid key or token gets HTTP `401` before any method runs, and a spent rate limit HTTP `429` |
+| `-32025` | Resource exhausted | 25 subscriptions reached |
+| `-32026` | Unsupported | A delivery mode other than `webhook` |
 | `-32015` | Callback endpoint error | Verification failed. `data.reason` is `challenge_failed`, `http_4xx`, `http_5xx`, `timeout`, `tls_error` or `connection_refused` |

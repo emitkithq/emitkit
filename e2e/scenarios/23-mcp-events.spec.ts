@@ -45,6 +45,7 @@ import type { APIRequestContext } from "@playwright/test";
  * - Feedback loop: an agent that reacts to an event by creating one gets
  *   its own event back.
  * - Secret rotation drops deliveries signed for the old secret.
+ * - A receiver that answers `425` (not ready yet) loses the event.
  * - A failed delivery is lost, or its retry changes the event id or reuses a
  *   stale timestamp and signature.
  * - Unsubscribe, a revoked API key, or a `410 Gone` from the receiver leave
@@ -96,6 +97,7 @@ type Behaviour =
   | "huge"
   | "fail"
   | "fail-once"
+  | "too-early-once"
   | "gone"
   | "redirect";
 
@@ -143,6 +145,11 @@ const startReceiver = async (): Promise<Receiver> => {
       if (mode === "fail-once" && json.type === undefined) {
         behaviour.set(path, "echo");
         res.writeHead(500).end("try again");
+        return;
+      }
+      if (mode === "too-early-once" && json.type === undefined) {
+        behaviour.set(path, "echo");
+        res.writeHead(425).end();
         return;
       }
       if (mode === "fail") {
@@ -554,14 +561,14 @@ test("unsafe or malformed subscriptions are refused", async () => {
     name: "order.shipped",
   });
   expect(unknownEvent.body.error).toMatchObject({
-    code: -32_011,
+    code: -32_023,
     data: { kind: "event" },
   });
 
   const poll = await attempt("https://example.com/hook", {
     delivery: { mode: "poll" },
   });
-  expect(poll.body.error).toMatchObject({ code: -32_014 });
+  expect(poll.body.error).toMatchObject({ code: -32_026 });
 
   const badArguments = await attempt("https://example.com/hook", {
     arguments: { channel: 5, surprise: true },
@@ -685,7 +692,7 @@ test.describe("delivery", () => {
       delivery,
       name: "not.an.event",
     });
-    expect(unknown.error?.code).toBe(-32_011);
+    expect(unknown.error?.code).toBe(-32_023);
 
     const removed = await sessionEra(agentKey, "events/unsubscribe", {
       arguments: { channel: "session-era" },
@@ -922,6 +929,25 @@ test.describe("delivery", () => {
     });
   });
 
+  test("a receiver that isn't ready yet gets the event again", async () => {
+    await subscribe(agentKey, "/too-early", newSecret(), {
+      channel: "too-early",
+    });
+    receiver.behaviour.set("/too-early", "too-early-once");
+    const eventId = await createEvent(appKey, {
+      channelName: "too-early",
+      title: "Arrived before the subscribe reply",
+    });
+    await expect
+      .poll(
+        () =>
+          deliveriesTo("/too-early").filter((d) => d.json.eventId === eventId)
+            .length,
+        { timeout: 60_000 }
+      )
+      .toBe(2);
+  });
+
   test("unsubscribe stops delivery and is idempotent", async () => {
     const params = {
       arguments: { channel: "Payments" },
@@ -1012,7 +1038,7 @@ test.describe("delivery", () => {
       channel: "one-too-many",
     });
     expect(over.body.error).toMatchObject({
-      code: -32_013,
+      code: -32_025,
       data: { limit: "subscriptions" },
     });
   });

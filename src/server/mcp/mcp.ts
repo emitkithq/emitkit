@@ -387,9 +387,9 @@ const refused = (
  * against its rate limit. Tool calls run the public API operations for that
  * principal, so they answer with REST's bodies.
  *
- * Both protocol eras are served. A request whose `params._meta` carries a
- * protocol version (or whose `MCP-Protocol-Version` isn't a session-era
- * version) is modern (2026-07-28): its mirrored headers are validated, its
+ * Both protocol eras are served. A request whose `params._meta` or
+ * `MCP-Protocol-Version` names a version that isn't session-era is modern
+ * (2026-07-28): its mirrored headers are validated, its
  * results carry `resultType`, and it can use `server/discover`. Everything
  * else is answered as before, starting with `initialize`. MCP Events
  * (`events/list`, `events/subscribe`, `events/unsubscribe`) work on both,

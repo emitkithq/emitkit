@@ -351,7 +351,11 @@ test("a public client registers itself", async () => {
   const body = {
     client_name: "E2E Agent",
     grant_types: ["authorization_code", "refresh_token"],
-    redirect_uris: [callback.url],
+    // Two hosts: Connected apps has to name both, not only the first.
+    redirect_uris: [
+      callback.url,
+      callback.url.replace("localhost", "127.0.0.1"),
+    ],
     response_types: ["code"],
     token_endpoint_auth_method: "none",
   };
@@ -685,6 +689,7 @@ test("Settings → Connected apps revokes at once", async ({ browser }) => {
     const dialog = page.getByRole("dialog");
     await expect(dialog.getByText("E2E Agent")).toBeVisible();
     await expect(dialog.getByText("OAuth Main")).toBeVisible();
+    await expect(dialog.getByText("localhost, 127.0.0.1")).toBeVisible();
     await dialog.getByRole("button", { name: "Revoke E2E Agent" }).click();
     await page.getByRole("button", { name: "Revoke access" }).click();
     await expect(dialog.getByText("E2E Agent")).toHaveCount(0);
@@ -700,6 +705,68 @@ test("Settings → Connected apps revokes at once", async ({ browser }) => {
     resource: discovery.resource,
   });
   expect(refresh.status).toBeGreaterThanOrEqual(400);
+});
+
+test("reconnecting doesn't bring a revoked token back", async ({ browser }) => {
+  const revoked = tokens;
+  const browserContext = await signedInContext(browser);
+  const page = await browserContext.newPage();
+  try {
+    // A token's `iat` has one-second resolution.
+    await page.waitForTimeout(1100);
+    const flow = await authorize(page);
+    await expect(page).toHaveURL(/\/oauth\/consent\?/u);
+    await page.getByRole("radio", { name: /OAuth Main/u }).check();
+    await page.getByRole("button", { name: "Authorize" }).click();
+    tokens = await exchange(await codeFrom(page, flow.state), flow.verifier);
+  } finally {
+    await browserContext.close();
+  }
+  expect(await statusOf(tokens.access)).toBe(200);
+  expect(await statusOf(revoked.access), "the revoked token").toBe(401);
+});
+
+test("revoking one project leaves the app's other projects alone", async ({
+  browser,
+}) => {
+  const browserContext = await signedInContext(browser);
+  const page = await browserContext.newPage();
+  let side = tokens;
+  try {
+    const flow = await authorize(page);
+    await expect(page).toHaveURL(/\/oauth\/consent\?/u);
+    await page.getByRole("radio", { name: /OAuth Side/u }).check();
+    await page.getByRole("button", { name: "Authorize" }).click();
+    side = await exchange(await codeFrom(page, flow.state), flow.verifier);
+  } finally {
+    await browserContext.close();
+  }
+  const connections = await session.rpc<
+    { id: string; projectName: string | null }[]
+  >("oauth/connections", {});
+  const grant = connections.find((row) => row.projectName === "OAuth Side");
+  await session.rpc("oauth/revoke", { id: grant?.id });
+
+  // A client replaying the revoked project's refresh token is refused...
+  const replay = await tokenRequest({
+    client_id: clientId,
+    grant_type: "refresh_token",
+    refresh_token: side.refresh,
+    resource: discovery.resource,
+  });
+  expect(replay.status).toBeGreaterThanOrEqual(400);
+  // ...and that doesn't cost the app its other project.
+  const refreshed = await tokenRequest({
+    client_id: clientId,
+    grant_type: "refresh_token",
+    refresh_token: tokens.refresh,
+    resource: discovery.resource,
+  });
+  expect(refreshed.status, JSON.stringify(refreshed.body)).toBe(200);
+  tokens = {
+    access: refreshed.body.access_token ?? "",
+    refresh: refreshed.body.refresh_token ?? tokens.refresh,
+  };
 });
 
 test("a deleted project asks for a project again instead of looping", async ({

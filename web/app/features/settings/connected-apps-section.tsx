@@ -46,10 +46,10 @@ const ConnectionRow = ({
               : ""}
           </span>
         ) : null}
-        {connection.redirectHost ? (
+        {connection.redirectHosts.length > 0 ? (
           <>
             <span aria-hidden="true">·</span>
-            <span>{connection.redirectHost}</span>
+            <span>{connection.redirectHosts.join(", ")}</span>
           </>
         ) : null}
         <span aria-hidden="true">·</span>

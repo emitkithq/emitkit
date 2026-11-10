@@ -38,6 +38,7 @@ export interface SessionInfo {
 export interface AccessTokenClaims {
   readonly userId: string;
   readonly clientId: string;
+  readonly issuedAtSeconds: number;
   /** The project the grant acts on (the consent's `referenceId`). */
   readonly projectId: string | null;
   readonly scopes: readonly string[];
@@ -46,6 +47,7 @@ export interface AccessTokenClaims {
 const AccessTokenPayload = Schema.Struct({
   [PROJECT_CLAIM]: Schema.optional(Schema.String),
   azp: Schema.String,
+  iat: Schema.Number,
   // Sender-constrained (DPoP) tokens need a proof this endpoint doesn't check.
   cnf: Schema.optional(Schema.Undefined),
   scope: Schema.optional(Schema.String),
@@ -558,9 +560,10 @@ export class Auth extends Context.Service<
         if (Option.isNone(claims)) {
           return null;
         }
-        const { azp, scope, sub } = claims.value;
+        const { azp, iat, scope, sub } = claims.value;
         return {
           clientId: azp,
+          issuedAtSeconds: iat,
           projectId: claims.value[PROJECT_CLAIM] ?? null,
           scopes: (scope ?? "").split(" ").filter((part) => part.length > 0),
           userId: sub,

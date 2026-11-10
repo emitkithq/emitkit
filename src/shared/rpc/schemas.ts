@@ -319,7 +319,7 @@ export const OAuthConnection = Schema.Struct({
   organizationName: NullableString,
   /** Null once the project is deleted. */
   projectName: NullableString,
-  redirectHost: NullableString,
+  redirectHosts: Schema.Array(Schema.String),
 });
 export type OAuthConnection = typeof OAuthConnection.Type;
 

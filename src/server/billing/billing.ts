@@ -178,7 +178,7 @@ export class Billing extends Context.Service<
       organizationId: string,
       options?: { readonly refresh?: boolean }
     ) => Effect.Effect<Omit<BillingStatus, "canManage">, InfrastructureError>;
-    /** Whether event pushes go out. Never fails: an outage keeps pushes on. */
+    /** Whether event pushes and MCP Events webhooks go out. Never fails: an outage keeps them on. */
     readonly pushAllowed: (organizationId: string) => Effect.Effect<boolean>;
     /** Why inviting `email` isn't allowed, or null when it is. */
     readonly inviteBlocked: (
