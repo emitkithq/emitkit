@@ -1,6 +1,6 @@
 # Notes: PR #2 after the independent review
 
-Scenarios `02`, `09`, `23` and `24` against `pnpm dev`, on `948a133`. The two skipped tests are `09`'s checks of prerendered HTML, which need a build.
+Scenarios `02`, `09`, `23` and `24` against `pnpm dev`, on `effaed4`. The two skipped tests are `09`'s checks of prerendered HTML, which need a build.
 
 ## What this run adds
 
@@ -8,6 +8,7 @@ Each test below was written first and failed on the code before its fix:
 
 - Reconnecting an app doesn't bring back a token from before the revocation (the old token got `200`).
 - Revoking one project leaves the app's other projects alone (replaying the revoked refresh token cost the app its other project's token, with `invalid_grant`).
+- A consent narrowed to leave out `mcp` cuts off earlier tokens (the old token got `200`). The test narrows the consent in the local D1.
 - Connected apps names every host a client registered.
 - A receiver that answers `425` gets the event again.
 
@@ -16,6 +17,7 @@ The `events/*` error codes follow the MCP Events draft, and scenario 23 asserts 
 ## Not covered
 
 - **The billing pause on MCP Events webhooks.** `pnpm dev` here has no Autumn key, so billing is off. It makes the same `pushAllowed` call push makes.
+- **A native redirect with no host** in Connected apps. It shows the scheme, and no test registers such a client.
 - ChatGPT, Claude and Claude Code need the public hosts and weren't tried.
 - `05-push-pwa` wasn't run. It still needs a run on staging or production.
 
