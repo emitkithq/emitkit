@@ -55,6 +55,10 @@ export const connectingRoleSql = (column: string) =>
     )
     .join(" or ")})`;
 
+/** A consent's scopes (a JSON array column) still include `mcp`, as an SQL condition. */
+export const consentAllowsMcpSql = (column: string) =>
+  `exists (select 1 from json_each(${column}) where value = '${MCP_SCOPE}')`;
+
 const RedirectUris = Schema.fromJsonString(Schema.Array(Schema.String));
 const decodeRedirectUris = Schema.decodeUnknownOption(RedirectUris);
 
@@ -190,7 +194,7 @@ export class OAuthGrants extends Context.Service<
           where c."clientId" = ${claims.clientId} and c."userId" = ${claims.userId}
             and c."referenceId" = ${claims.projectId}
             and cast(strftime('%s', c."createdAt") as integer) <= ${claims.issuedAtSeconds}
-            and exists (select 1 from json_each(c.scopes) where value = ${MCP_SCOPE})
+            and ${sql.literal(consentAllowsMcpSql("c.scopes"))}
           limit 1
         `.pipe(Effect.mapError(infrastructure("oauthGrants.resolve")));
         const [row] = rows;

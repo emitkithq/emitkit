@@ -679,18 +679,43 @@ test("a member can't connect, and a demoted owner loses access", async ({
   expect(restored.status).toBe(200);
 });
 
-test("a consent narrowed to leave out mcp cuts off earlier tokens", async () => {
-  test.skip(!isLocal, "changes the consent in the local D1");
+/** The app creates an event in `orders`, the channel the grant subscribes to. */
+const placeOrder = async (title: string) => {
+  const created = await context.post(`${target.api}/v1/events`, {
+    data: { channelName: "orders", title },
+    headers: { authorization: `Bearer ${appKey}` },
+  });
+  return ((await created.json()) as { data: { id: string } }).data.id;
+};
+
+test("a consent narrowed to leave out mcp cuts off earlier tokens and webhooks", async () => {
+  test.skip(
+    !(isLocal && isDevServer),
+    "changes the consent in the local D1 and needs a reachable callback"
+  );
   expect(await statusOf(tokens.access)).toBe(200);
   const narrow = `update "oauthConsent" set scopes = '["openid"]' where "clientId" = '${clientId}'`;
   const restore = `update "oauthConsent" set scopes = '["openid","profile","email","offline_access","mcp"]' where "clientId" = '${clientId}'`;
   d1(narrow);
+  let whileNarrowed = "";
   try {
     expect(await statusOf(tokens.access)).toBe(401);
+    // The grant's existing subscription (on `orders`) stops hearing events too.
+    whileNarrowed = await placeOrder("Placed while narrowed");
+    await sleep(6000);
   } finally {
     d1(restore);
   }
   expect(await statusOf(tokens.access)).toBe(200);
+  const afterRestore = await placeOrder("Placed after restoring");
+  await expect
+    .poll(() => callback.events.map((event) => event.eventId), {
+      timeout: 20_000,
+    })
+    .toContain(afterRestore);
+  expect(callback.events.map((event) => event.eventId)).not.toContain(
+    whileNarrowed
+  );
 });
 
 test("Settings → Connected apps revokes at once", async ({ browser }) => {

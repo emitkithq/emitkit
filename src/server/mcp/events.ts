@@ -1,7 +1,7 @@
 import { Billing } from "@server/billing/billing";
 import { infrastructure } from "@server/errors";
 import type { InfrastructureError } from "@server/errors";
-import { connectingRoleSql } from "@server/oauth/grants";
+import { connectingRoleSql, consentAllowsMcpSql } from "@server/oauth/grants";
 import { AppConfig } from "@server/platform/config";
 import { sha256Hex } from "@server/platform/ids";
 import { stringifyJson } from "@server/platform/json";
@@ -32,8 +32,8 @@ export interface Subscriber {
 
 /**
  * The subscription's principal still has access: its API key exists and is
- * enabled, or its OAuth grant exists and its user may still connect apps
- * (`OAuthGrants`' role rule). Expects the subscription as `s`.
+ * enabled, or its OAuth grant exists, still includes `mcp`, and its user may
+ * still connect apps (`OAuthGrants`' rules). Expects the subscription as `s`.
  */
 const LIVE_PRINCIPAL = `(
   exists (select 1 from apikey k where k.id = s.principal_id and coalesce(k.enabled, 1) = 1)
@@ -42,6 +42,7 @@ const LIVE_PRINCIPAL = `(
     join member m on m."userId" = c."userId" and m."organizationId" = s.organization_id
     where c.id = s.principal_id and c."referenceId" = s.project_id
       and ${connectingRoleSql("m.role")}
+      and ${consentAllowsMcpSql("c.scopes")}
   )
 )`;
 
