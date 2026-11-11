@@ -1,25 +1,276 @@
 ---
 title: Connect a client
-description: Add EmitKit to Claude Code, ChatGPT, Claude or any MCP client, with OAuth or an API key.
+description: Add EmitKit's MCP server to ChatGPT, Claude, Claude Code, Cursor, VS Code, Codex, Gemini CLI, Windsurf and other MCP clients.
 sidebar:
   order: 1
 ---
 
-Clients that sign in with OAuth, such as ChatGPT, Claude and Claude Code,
-need only the server URL: see [Connect with OAuth](/integrations/oauth). Any
-client that can send a custom request header can use an
-[API key](/api/api-keys) for the Project the agent should write to instead.
+Every client connects to the same address:
 
-## Claude Code with an API key
+```text
+https://api.emitkit.com/mcp
+```
+
+There are two ways to give a client access:
+
+- **Sign in.** The client opens EmitKit in your browser. You sign in, pick the
+  Project the client may use, and select **Authorize**. There is nothing to
+  copy, and the client renews its access on its own. See
+  [Connect with OAuth](/integrations/oauth) for what happens behind the scenes.
+- **API key.** You create an [API key](/api/api-keys) for the Project and put
+  it in the client's settings as the header
+  `Authorization: Bearer emitkit_…`. Use this for clients that can't sign in,
+  and for scripts and servers.
+
+Pick one. A client that sends a fixed `Authorization` header doesn't sign in,
+so remove the header if you want to sign in instead.
+
+| Client | Sign in | API key |
+| --- | --- | --- |
+| [ChatGPT](#chatgpt) | Yes | No |
+| [Claude](#claude) | Yes | Only where Claude offers request headers |
+| [Claude Code](#claude-code) | Yes | Yes |
+| [Cursor](#cursor) | Yes | Yes |
+| [VS Code](#vs-code) | Yes | Yes |
+| [Codex](#codex) | Yes | Yes |
+| [Gemini CLI](#gemini-cli) | Yes | Yes |
+| [Windsurf](#windsurf) | Yes | Yes |
+
+Only owners and admins of an organization can connect a client by signing in,
+because a connected client can send events and erase users, like an API key.
+
+## ChatGPT
+
+1. Open [ChatGPT Plugins](https://chatgpt.com/plugins), select **+**, then
+   **Add custom MCP server**.
+2. Enter a name, such as EmitKit, and a short description.
+3. Under **Connection**, enter `https://api.emitkit.com/mcp`.
+4. For authentication, choose **OAuth**. ChatGPT registers itself with
+   EmitKit, so there is no client ID to enter.
+5. Read the warning, confirm it, and select **Create as a plugin**.
+6. Sign in to EmitKit when ChatGPT asks, pick a Project and select
+   **Authorize**. ChatGPT then lists EmitKit's tools.
+
+ChatGPT can't send an API key, so it always signs in. Whether you can add a
+custom server depends on your plan and workspace. In a Business or Enterprise
+workspace, an admin may need to allow it.
+
+If EmitKit's tools change, open the plugin in ChatGPT Plugins, select
+**Refresh**, and start a new chat.
+
+ChatGPT also supports [MCP Events](/integrations/mcp-events), so it can
+subscribe to new events in your Project.
+
+## Claude
+
+This covers claude.ai and the Claude desktop app, which share the same
+connectors.
+
+**On a Free, Pro, Max or Ultra plan:**
+
+1. Go to **Customize → Connectors**, select **Add**, then
+   **Add custom connector**.
+2. Enter a name, such as EmitKit, and `https://api.emitkit.com/mcp`. Select
+   **Continue**.
+3. Keep the authentication options Claude marks **Detected**. For
+   **OAuth client**, the option must be **Register automatically**: EmitKit
+   doesn't support **Use Claude's published identity** yet.
+4. Select **Add**, then **Connect**. Sign in to EmitKit, pick a Project and
+   select **Authorize**.
+
+The Free plan allows one custom connector.
+
+**On a Team or Enterprise plan,** an Owner adds the connector once, under
+**Organization settings → Connectors → Add → Custom → Web**, with the same
+settings. Each member then goes to **Customize → Connectors**, finds EmitKit
+and selects **Connect**, so every member signs in with their own EmitKit
+account.
+
+To use the connector in a chat, select **+ → Connectors** and turn EmitKit on.
+
+**With an API key:** some organizations can add request headers to a
+connector (Claude calls this a beta). Choose **No sign-in**, then add the
+header `authorization` with the value `Bearer emitkit_…`, including the word
+`Bearer` and the space. Everyone who uses the connector then shares that key,
+so give it a key of its own. Claude doesn't let you edit these settings later:
+remove the connector and add it again to change them.
+
+## Claude Code
+
+Add the server, then sign in:
+
+```bash
+claude mcp add --transport http emitkit https://api.emitkit.com/mcp
+```
+
+In Claude Code, run `/mcp`, choose `emitkit`, then **Authenticate**. Your
+browser opens EmitKit. After you authorize, Claude Code stores the access and
+renews it.
+
+By default the server is available only in the current project. Add
+`--scope user` to use it in all your projects, or `--scope project` to save
+it in the project's `.mcp.json` and share it with your team. Everyone then
+signs in with their own account.
+
+**With an API key:**
 
 ```bash
 claude mcp add --transport http emitkit https://api.emitkit.com/mcp \
   --header "Authorization: Bearer emitkit_REPLACEWITHKEY"
 ```
 
+In a shared `.mcp.json`, read the key from an environment variable so it stays
+out of the repository:
+
+```json
+{
+  "mcpServers": {
+    "emitkit": {
+      "type": "http",
+      "url": "https://api.emitkit.com/mcp",
+      "headers": {
+        "Authorization": "Bearer ${EMITKIT_API_KEY}"
+      }
+    }
+  }
+}
+```
+
+Keep `"type": "http"`. Without it, Claude Code doesn't treat the entry as a
+remote server.
+
+## Cursor
+
+Add EmitKit to `~/.cursor/mcp.json` to use it in every project, or to
+`.cursor/mcp.json` in one project:
+
+```json
+{
+  "mcpServers": {
+    "emitkit": {
+      "url": "https://api.emitkit.com/mcp"
+    }
+  }
+}
+```
+
+Cursor then asks you to sign in to EmitKit in your browser.
+
+**With an API key,** add a header that reads the key from an environment
+variable:
+
+```json
+{
+  "mcpServers": {
+    "emitkit": {
+      "url": "https://api.emitkit.com/mcp",
+      "headers": {
+        "Authorization": "Bearer ${env:EMITKIT_API_KEY}"
+      }
+    }
+  }
+}
+```
+
+## VS Code
+
+This is for GitHub Copilot in VS Code.
+
+1. Open the Command Palette and run **MCP: Add Server**.
+2. Choose **HTTP**, enter `https://api.emitkit.com/mcp`, and name it
+   `emitkit`.
+3. Choose where to save it. **Global** makes it available in all your
+   projects.
+4. When VS Code asks, sign in to EmitKit in your browser.
+
+To use an API key instead, add an `Authorization` header to the server's
+entry, as VS Code's
+[MCP configuration reference](https://code.visualstudio.com/docs/agents/reference/mcp-configuration)
+describes. Don't commit the key: use the reference's options for secrets.
+
+## Codex
+
+This covers the Codex CLI and the Codex IDE extension, which share one
+configuration.
+
+```bash
+codex mcp add emitkit --url https://api.emitkit.com/mcp
+codex mcp login emitkit
+```
+
+`codex mcp login` opens your browser to sign in. On a machine without a
+browser, add `--no-browser` and open the link it prints on another device.
+
+**With an API key,** add EmitKit to `~/.codex/config.toml` and keep the key in
+an environment variable:
+
+```toml
+[mcp_servers.emitkit]
+url = "https://api.emitkit.com/mcp"
+bearer_token_env_var = "EMITKIT_API_KEY"
+```
+
+The ChatGPT desktop app reads the same file under **Settings → MCP servers**.
+
+## Gemini CLI
+
+```bash
+gemini mcp add --transport http emitkit https://api.emitkit.com/mcp
+```
+
+In Gemini CLI, run `/mcp auth emitkit` to sign in. It needs a browser on the
+same machine.
+
+**With an API key,** add EmitKit to `~/.gemini/settings.json`, or to
+`.gemini/settings.json` in one project:
+
+```json
+{
+  "mcpServers": {
+    "emitkit": {
+      "httpUrl": "https://api.emitkit.com/mcp",
+      "headers": {
+        "Authorization": "Bearer $EMITKIT_API_KEY"
+      }
+    }
+  }
+}
+```
+
+Use `httpUrl`, not `url`. In Gemini CLI, `url` means the older SSE transport,
+which EmitKit doesn't serve.
+
+## Windsurf
+
+Windsurf's editor is now called Devin Desktop, and its documentation lives at
+[docs.devin.ai](https://docs.devin.ai/desktop/cascade/mcp). Add EmitKit to
+`~/.config/devin/mcp_config.json` to use it everywhere:
+
+```json
+{
+  "mcpServers": {
+    "emitkit": {
+      "serverUrl": "https://api.emitkit.com/mcp"
+    }
+  }
+}
+```
+
+When EmitKit shows **Needs authentication**, select **Authenticate** and sign
+in.
+
+**With an API key,** add
+`"headers": { "Authorization": "Bearer emitkit_…" }` to the entry. For one
+project, put the entry in `.devin/mcp_config.local.json`, which stays out of
+git, rather than in the shared `.devin/mcp_config.json`.
+
 ## Other clients
 
-Most clients accept a JSON server entry like this:
+Any MCP client works if it supports remote servers over Streamable HTTP. To
+sign in, it must also support
+[MCP authorization](https://modelcontextprotocol.io/specification/2025-11-25/basic/authorization)
+with dynamic client registration. Otherwise, give it an API key. Most clients
+accept an entry like this:
 
 ```json
 {
@@ -35,7 +286,20 @@ Most clients accept a JSON server entry like this:
 }
 ```
 
-A request without credentials, or with a wrong key, is rejected with `401` and
-a `WWW-Authenticate` header that points OAuth clients at EmitKit's sign-in.
-EmitKit checks the credential on every request, so a wrong key already fails
-when the client connects: if it can't connect, check the key.
+The names of the keys differ between clients (`url`, `serverUrl`, `httpUrl`),
+so check your client's documentation.
+
+## If it doesn't work
+
+| What you see | What to do |
+| --- | --- |
+| The client can't connect, or gets `401` | EmitKit checks the credential on every request, including the first. Check that the key is complete, starts with `emitkit_`, and hasn't been revoked or rotated. |
+| The client never asks you to sign in | It's probably sending an `Authorization` header. Remove the header, or use an API key instead. |
+| Sign-in says only owners and admins can connect | Ask an owner or admin to connect the client, or to make you an admin. |
+| The client uses the wrong Project | In the dashboard, open **Settings → Connected apps**, revoke the client, and connect it again to pick another Project. For a key, use a key from the right Project. |
+| Only `getEvent`, `listEvents` and `listChannels` appear | The key is [read-only](/api/api-keys). Use a full key to send events. |
+| Requests fail with `429` | Each key or connection can make 100 requests a minute. Wait for the time in the `Retry-After` header. |
+| You have to sign in again | A sign-in lasts 30 days without use. It also ends when you revoke the client, when its Project is deleted, or when you stop being an owner or admin. |
+
+To stop a signed-in client, open **Settings → Connected apps** and select
+**Revoke**. It loses access immediately.

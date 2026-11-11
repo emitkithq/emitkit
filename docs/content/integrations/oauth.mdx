@@ -38,51 +38,8 @@ only owners and admins can create.
 
 ## Clients
 
-<Tabs>
-  <Tab title="ChatGPT">
-
-1. In ChatGPT, open **Settings → Security and login** and turn on
-   **Developer mode**. Whether you can depends on your account and
-   workspace.
-2. Go to [ChatGPT Plugins](https://chatgpt.com/plugins) and select the plus
-   button.
-3. Enter a name, such as EmitKit, and under **Connection** enter
-   `https://api.emitkit.com/mcp`.
-4. Create the connection. ChatGPT registers itself and opens EmitKit's
-   sign-in; after you authorize, it lists EmitKit's tools.
-
-  </Tab>
-  <Tab title="Claude">
-
-In Claude, open **Customize → Connectors**, select **+** and then **Add
-custom connector**, and enter `https://api.emitkit.com/mcp`. Leave the OAuth
-fields under **Advanced settings** empty: Claude registers itself. Select
-**Connect** on the new connector to open EmitKit's sign-in.
-
-On Team and Enterprise plans an owner adds the connector under
-**Organization settings → Connectors**, and each member then connects with
-their own EmitKit account.
-
-  </Tab>
-  <Tab title="Claude Code">
-
-```bash
-claude mcp add --transport http emitkit https://api.emitkit.com/mcp
-```
-
-Then run `/mcp` in Claude Code and choose **Authenticate**. Your browser opens
-EmitKit; after you authorize, Claude Code stores the tokens.
-
-  </Tab>
-  <Tab title="Other clients">
-
-Any client that implements [MCP authorization](https://modelcontextprotocol.io/specification/2025-11-25/basic/authorization)
-works: dynamic client registration, the authorization code flow with PKCE
-(`S256`), and the `resource` parameter. Clients that can send a fixed
-header can use an [API key](/mcp/api-key) instead.
-
-  </Tab>
-</Tabs>
+[Connect a client](/mcp/clients) has the steps for ChatGPT, Claude,
+Claude Code, Cursor, VS Code, Codex, Gemini CLI, Windsurf and other clients.
 
 ## What a connected app can do
 
