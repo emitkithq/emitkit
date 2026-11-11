@@ -1,5 +1,8 @@
+import { rememberedOAuthQueryPlugin } from "@app/lib/oauth";
 import { forgetRememberedEndpoints, releaseDevicePush } from "@app/lib/push";
+import { oauthProviderClient } from "@better-auth/oauth-provider/client";
 import { forgetVisitor } from "@ui/visits";
+import type { BetterAuthClientPlugin } from "better-auth/client";
 import { emailOTPClient, organizationClient } from "better-auth/client/plugins";
 import { createAuthClient } from "better-auth/react";
 
@@ -49,6 +52,12 @@ const fetchWithReasonPhrase: typeof fetch = async (input, init) => {
     : response;
 };
 
+/** Keeps an OAuth flow alive across sign-in ↔ sign-up (see `@app/lib/oauth`). */
+const rememberedOAuthQuery = {
+  fetchPlugins: [rememberedOAuthQueryPlugin],
+  id: "emitkit-remembered-oauth-query",
+} satisfies BetterAuthClientPlugin;
+
 export const authClient = createAuthClient({
   basePath: "/api/auth",
   baseURL: window.location.origin,
@@ -61,7 +70,14 @@ export const authClient = createAuthClient({
       }
     },
   },
-  plugins: [emailOTPClient(), organizationClient()],
+  plugins: [
+    emailOTPClient(),
+    organizationClient(),
+    // Echoes the signed OAuth query of `/auth/sign-in?…` on sign-in, so the
+    // provider resumes the authorization once the session exists.
+    oauthProviderClient(),
+    rememberedOAuthQuery,
+  ],
 });
 
 export type AuthClient = typeof authClient;

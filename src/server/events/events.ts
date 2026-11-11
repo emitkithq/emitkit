@@ -73,6 +73,13 @@ export interface EventInput {
   readonly resume?: string | undefined;
 }
 
+/** Where an event is written, and the API key or OAuth grant writing it (MCP Events skip its own subscriptions). */
+export interface IngestScope {
+  readonly organizationId: string;
+  readonly projectId: string | null;
+  readonly principalId?: string | null;
+}
+
 /** An event as the public API returns it: the stored event and its card, if any. */
 export interface FoundEvent {
   readonly event: ProductEvent;
@@ -233,10 +240,7 @@ export class Events extends Context.Service<
   Events,
   {
     readonly ingest: (
-      scope: {
-        readonly organizationId: string;
-        readonly projectId: string | null;
-      },
+      scope: IngestScope,
       input: EventInput
     ) => Effect.Effect<
       FoundEvent,
@@ -316,10 +320,17 @@ export class Events extends Context.Service<
       const cards = yield* Cards;
 
       /**
-       * What follows a stored event on the queue: its push, and for a
-       * question with a callback, the check that expires it.
+       * What follows a stored event on the queue: its push, its MCP Events
+       * fan-out, and for a question with a callback, the check that expires
+       * it. Push and fan-out are separate messages, so a failure in one
+       * never repeats the other.
        */
-      const queueWork = (event: StoredEvent, card: NewCard, waits: boolean) =>
+      const queueWork = (
+        event: StoredEvent,
+        card: NewCard,
+        waits: boolean,
+        principalId: string | null
+      ) =>
         Effect.gen(function* () {
           if (card.expiresAtMs !== null && card.callbackUrl !== null) {
             yield* afterWrite(
@@ -355,13 +366,30 @@ export class Events extends Context.Service<
               })
             );
           }
+          yield* afterWrite(
+            "queue.send fan-out",
+            queue.send({
+              channelId: event.channelId,
+              channelName: event.channelName,
+              createdAtMs: event.createdAtMs,
+              description: event.description,
+              eventId: event.id,
+              icon: event.icon,
+              metadata: event.metadata,
+              organizationId: event.organizationId,
+              principalId,
+              projectId: event.projectId,
+              source: event.source,
+              tags: decodeTags(event.tags),
+              title: event.title,
+              type: "mcp.fanout",
+              userId: event.userId,
+            })
+          );
         });
 
       const ingest = Effect.fn("Events.ingest")(function* (
-        scope: {
-          readonly organizationId: string;
-          readonly projectId: string | null;
-        },
+        scope: IngestScope,
         input: EventInput
       ) {
         if (!scope.projectId) {
@@ -451,7 +479,7 @@ export class Events extends Context.Service<
             projects.markFirstEvent(project.id)
           );
         }
-        yield* queueWork(event, newCard, waits);
+        yield* queueWork(event, newCard, waits, scope.principalId ?? null);
         return {
           card: hasCard ? cardOf(newCard, pendingAnswer(expiresAtMs)) : null,
           event: toProductEvent(event, new Map()),

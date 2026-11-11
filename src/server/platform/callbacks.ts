@@ -28,8 +28,8 @@ export interface Delivery {
 }
 
 /**
- * Callbacks to senders' own URLs, the only outbound requests to addresses
- * customers choose. Signed like Standard Webhooks (Svix), with a secret per
+ * Callbacks to senders' own URLs. (MCP Events webhooks, in `webhooks.ts`,
+ * are the other outbound requests to addresses customers choose.) Signed like Standard Webhooks (Svix), with a secret per
  * project derived by HKDF from BETTER_AUTH_SECRET: nothing is stored, and
  * changing that secret changes every project's callback secret.
  */

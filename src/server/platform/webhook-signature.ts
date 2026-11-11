@@ -14,7 +14,7 @@ const encodeBase64 = (bytes: ArrayBuffer) =>
   btoa(String.fromCodePoint(...new Uint8Array(bytes)));
 
 /** Compares two strings in time independent of where they differ. */
-const constantTimeEqual = (a: string, b: string) => {
+export const constantTimeEqual = (a: string, b: string) => {
   if (a.length !== b.length) {
     return false;
   }

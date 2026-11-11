@@ -4,7 +4,7 @@ import { Container } from "@www/components/container";
 import { Grain, Ping } from "@www/components/halftone";
 import { Photo } from "@www/components/photo";
 import { SectionIntro } from "@www/components/section-intro";
-import { useEffect, useRef, useState } from "react";
+import { useCycle } from "@www/components/use-cycle";
 
 /** Moments from apps and agents, as their push notifications read. */
 const NOTIFICATIONS = [
@@ -27,40 +27,9 @@ const POINTS = [
   "Notifications per project or per channel, your choice",
 ] as const;
 
-/**
- * A new notification lands on top of the stack every few seconds while the
- * stack is on screen. The prerendered stack is the first three, still; the
- * cycle starts after hydration and never for readers who ask for less motion.
- */
-const useArrivals = () => {
-  const [newest, setNewest] = useState(0);
-  const stack = useRef<HTMLOListElement>(null);
-  useEffect(() => {
-    const element = stack.current;
-    if (
-      !element ||
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches
-    ) {
-      return;
-    }
-    let timer: ReturnType<typeof setInterval> | undefined;
-    const observer = new IntersectionObserver(([entry]) => {
-      clearInterval(timer);
-      if (entry?.isIntersecting) {
-        timer = setInterval(() => setNewest((index) => index + 1), EVERY_MS);
-      }
-    });
-    observer.observe(element);
-    return () => {
-      clearInterval(timer);
-      observer.disconnect();
-    };
-  }, []);
-  return { newest, stack };
-};
-
 export const PushSection = () => {
-  const { newest, stack } = useArrivals();
+  // A new notification lands on top of the stack every few seconds.
+  const { ref: stack, tick: newest } = useCycle<HTMLOListElement>(EVERY_MS);
   const shown = Array.from({ length: VISIBLE }, (_, offset) => {
     const index = newest - offset;
     const at =
@@ -76,7 +45,7 @@ export const PushSection = () => {
           <SectionIntro
             id="push-title"
             label="Push notifications"
-            number="03"
+            number="04"
             title="Only what deserves a buzz."
           >
             Install EmitKit on your phone and desktop and choose, channel by

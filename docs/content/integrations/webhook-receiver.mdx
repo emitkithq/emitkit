@@ -1,0 +1,122 @@
+---
+title: Build a webhook receiver
+description: Receive MCP Events in your own service, answer the verification handshake and check every signature.
+sidebar:
+  order: 3
+---
+
+A receiver is the `https` endpoint you pass as `delivery.url` to
+[`events/subscribe`](/integrations/mcp-events). It has three jobs:
+
+1. **Verify the signature** of every request against the raw body.
+2. **Answer the verification handshake** by echoing the challenge.
+3. **Accept events quickly** with a `2xx`, and skip ones it has already seen.
+
+EmitKit signs requests the [Standard Webhooks](https://www.standardwebhooks.com)
+way, so its libraries (JavaScript, Python, Go, Ruby, PHP, Rust and more) verify
+EmitKit's deliveries unchanged.
+
+<CodeGroup>
+
+```ts title="Node (standardwebhooks)"
+import { Webhook } from "standardwebhooks";
+import express from "express";
+
+const webhook = new Webhook(process.env.EMITKIT_WEBHOOK_SECRET!); // whsec_…
+const seen = new Set<string>();
+
+const app = express();
+// Verify the raw bytes: parsing and re-serializing JSON breaks the signature.
+app.post(
+  "/hooks/emitkit",
+  express.raw({ type: "application/json" }),
+  (req, res) => {
+    let payload: any;
+    try {
+      payload = webhook.verify(req.body.toString("utf8"), {
+        "webhook-id": req.header("webhook-id")!,
+        "webhook-timestamp": req.header("webhook-timestamp")!,
+        "webhook-signature": req.header("webhook-signature")!,
+      });
+    } catch {
+      return res.status(401).end();
+    }
+
+    if (payload.type === "verification") {
+      return res.json({ challenge: payload.challenge });
+    }
+
+    // Retries repeat the event id; handle each event once.
+    if (!seen.has(payload.eventId)) {
+      seen.add(payload.eventId);
+      queueForAgent(payload.data); // Do the work after replying.
+    }
+    res.status(204).end();
+  }
+);
+```
+
+```ts title="Node (no dependencies)"
+import { createHmac, timingSafeEqual } from "node:crypto";
+
+/** True when one of the `v1,` signatures matches and the timestamp is fresh. */
+export const verifyEmitKit = (
+  secret: string, // whsec_…
+  headers: { id: string; timestamp: string; signature: string },
+  rawBody: string
+) => {
+  const age = Math.abs(Date.now() / 1000 - Number(headers.timestamp));
+  if (!(age < 300)) return false;
+  const key = Buffer.from(secret.slice("whsec_".length), "base64");
+  const expected = createHmac("sha256", key)
+    .update(`${headers.id}.${headers.timestamp}.${rawBody}`)
+    .digest();
+  return headers.signature.split(" ").some((candidate) => {
+    const [version, value] = candidate.split(",");
+    if (version !== "v1" || !value) return false;
+    const actual = Buffer.from(value, "base64");
+    return actual.length === expected.length && timingSafeEqual(actual, expected);
+  });
+};
+```
+
+```python title="Python (standardwebhooks)"
+from standardwebhooks.webhooks import Webhook
+
+webhook = Webhook(os.environ["EMITKIT_WEBHOOK_SECRET"])  # whsec_…
+
+@app.post("/hooks/emitkit")
+def emitkit(request):
+    payload = webhook.verify(request.body, request.headers)  # raises if invalid
+    if payload.get("type") == "verification":
+        return {"challenge": payload["challenge"]}
+    enqueue_for_agent(payload["data"])
+    return "", 204
+```
+
+</CodeGroup>
+
+## What arrives
+
+| Request | Body | Reply |
+| --- | --- | --- |
+| Verification, on a subscribe or refresh; answer every one | `{"type": "verification", "challenge": "…"}`, `webhook-id: msg_verification_…` | `2xx` with `{"challenge": "…"}` |
+| An event | `{"eventId", "name": "event.created", "timestamp", "data", "cursor": null}`, `webhook-id` = `eventId` | `2xx` |
+
+Both are signed with the subscription's secret and carry
+`X-MCP-Subscription-Id`. The full payload is described in
+[MCP Events](/integrations/mcp-events#deliveries).
+
+## Checklist
+
+- **Use the raw body.** Compute the signature over the exact bytes received.
+- **Accept any matching signature.** During a secret rotation the header holds
+  two space-separated `v1,` signatures.
+- **Reject stale timestamps**, more than five minutes from your clock.
+- **Reply fast.** EmitKit waits 10 seconds. Hand the work to a queue and reply
+  `2xx` first.
+- **Deduplicate on `webhook-id`.** Retries resend the same event id.
+- **Answer `410 Gone`** to end a subscription from your side, for example after
+  the agent that owned it is removed.
+- **Keep data as data.** Event titles and metadata come from whoever sent the
+  event. Never feed them to an agent as instructions.

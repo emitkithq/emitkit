@@ -25,6 +25,9 @@ import {
   EventPage,
   EventQuery,
   GettingStarted,
+  OAuthChoices,
+  OAuthConnection,
+  OAuthSelection,
   OrganizationBrand,
   Project,
   ProjectInput,
@@ -112,6 +115,12 @@ export const contract = {
     syncDevice: oc.input(PushDeviceSyncInput).output(PushDeviceSync),
     test: oc.output(TestPushResult),
     unsubscribe: oc.input(ByEndpoint).output(Ok),
+  },
+  oauth: {
+    choices: oc.output(OAuthChoices),
+    connections: oc.output(Schema.Array(OAuthConnection)),
+    revoke: oc.input(ById).output(Ok),
+    select: oc.input(OAuthSelection).output(Ok),
   },
   projects: {
     /** The project's callback signing secret, `whsec_…` (owners and admins). */

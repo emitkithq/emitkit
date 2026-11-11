@@ -1,6 +1,7 @@
 import { BillingSection } from "@app/features/billing/billing-section";
 import { AccountSection } from "@app/features/settings/account-section";
 import { ApiKeysSection } from "@app/features/settings/api-keys-section";
+import { ConnectedAppsSection } from "@app/features/settings/connected-apps-section";
 import { MembersSection } from "@app/features/settings/members-section";
 import { NotificationsSection } from "@app/features/settings/notifications-section";
 import { OrganizationSection } from "@app/features/settings/organization-section";
@@ -42,6 +43,9 @@ const SectionContent = ({
     }
     case "notifications": {
       return <NotificationsSection key={organization.id} />;
+    }
+    case "connected-apps": {
+      return <ConnectedAppsSection />;
     }
     case "organization": {
       return (

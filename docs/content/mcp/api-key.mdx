@@ -15,8 +15,8 @@ Authorization: Bearer emitkit_REPLACEWITHKEY
 X-API-Key: emitkit_REPLACEWITHKEY
 ```
 
-If both headers are present, they must carry the same key; otherwise tool
-calls fail with an authentication error. Keys in the URL are never read.
+If both headers are present, they must carry the same key. Otherwise every
+request is refused with `401`. Keys in the URL are never read.
 
 The key decides what the agent can do: it writes events to the key's Project
 and can identify and erase users in the key's Organization. Give each agent or

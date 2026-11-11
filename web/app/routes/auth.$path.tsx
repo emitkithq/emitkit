@@ -1,4 +1,5 @@
 import { authPathSegments } from "@app/lib/auth-ui";
+import { rememberOAuthQuery } from "@app/lib/oauth";
 import { usePageTitle } from "@app/lib/page-title";
 import { leaveGuestAuthPage } from "@app/lib/session";
 import { Auth } from "@better-auth-ui/heroui";
@@ -125,6 +126,10 @@ export const Route = createFileRoute("/auth/$path")({
     if (!authPathSegments.has(path)) {
       throw notFound();
     }
+    // Arriving from an OAuth app: keep its signed request for sign-up too.
+    // The raw query, not the router's: it re-encodes repeated parameters
+    // (`ba_param`) as JSON, which breaks the signature.
+    rememberOAuthQuery(window.location.search);
     await leaveGuestAuthPage(path, location.href);
   },
   component: AuthPage,

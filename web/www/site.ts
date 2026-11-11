@@ -13,6 +13,9 @@ export const DOCS_URL = "/docs";
 export const QUICKSTART_URL = `${DOCS_URL}/getting-started`;
 export const API_REFERENCE_URL = `${DOCS_URL}/reference`;
 export const SDK_DOCS_URL = `${DOCS_URL}/sdk`;
+export const MCP_EVENTS_DOCS_URL = `${DOCS_URL}/integrations/mcp-events`;
+export const OAUTH_DOCS_URL = `${DOCS_URL}/integrations/oauth`;
+export const WEBHOOK_RECEIVER_DOCS_URL = `${DOCS_URL}/integrations/webhook-receiver`;
 export const GITHUB_URL = "https://github.com/emitkithq";
 /** The source, for the header's and the pricing section's GitHub buttons. */
 export const REPO_URL = "https://github.com/emitkithq/emitkit";

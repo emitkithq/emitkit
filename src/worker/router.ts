@@ -51,6 +51,23 @@ const publicApi = (request: Request, url: URL, env: Env) => {
   return handlePublicApi(new Request(canonical, request), env);
 };
 
+/**
+ * OAuth discovery on the app host. Better Auth answers
+ * `/.well-known/oauth-authorization-server/api/auth` (RFC 8414) itself, and
+ * OpenID configuration at `/api/auth/.well-known/openid-configuration`; the
+ * path-inserted OpenID form some MCP clients try is mapped onto that.
+ */
+const wellKnownRequest = (request: Request, url: URL): Request => {
+  const openId = "/.well-known/openid-configuration/api/auth";
+  if (url.pathname !== openId) {
+    return request;
+  }
+  return new Request(
+    new URL(`/api/auth/.well-known/openid-configuration${url.search}`, url),
+    request
+  );
+};
+
 export const route = (
   request: Request,
   env: Env
@@ -67,6 +84,12 @@ export const route = (
     case "app": {
       if (url.pathname.startsWith("/api/auth/")) {
         return handleAuth(request, env);
+      }
+      if (
+        url.pathname.startsWith("/.well-known/oauth-authorization-server") ||
+        url.pathname.startsWith("/.well-known/openid-configuration")
+      ) {
+        return handleAuth(wellKnownRequest(request, url), env);
       }
       if (url.pathname.startsWith("/rpc/")) {
         return handleRpc(request, env);

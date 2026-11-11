@@ -1,0 +1,24 @@
+---
+title: Connect ChatGPT and Claude, and let agents subscribe to events
+description: Sign in from ChatGPT, Claude and other MCP clients with OAuth, and let agents receive new events as signed webhooks.
+type: changelog
+date: 2026-09-30
+changelog:
+  category: MCP
+---
+
+- **MCP Events.** An agent can call `events/subscribe` on the MCP server for
+  `event.created`, filtered by channel, tags or user. EmitKit then posts each
+  matching event to the agent's `https` callback as a
+  [Standard Webhooks](https://www.standardwebhooks.com) request, after a
+  signed verification handshake. See [MCP Events](/integrations/mcp-events).
+- **No feedback loops.** Events created with an agent's own API key are never
+  delivered back to that key's subscriptions.
+- **MCP protocol 2026-07-28.** The server answers `server/discover` and
+  per-request metadata. Clients on earlier versions keep using `initialize`, and can use MCP Events too.
+- **New Integrations docs**, including how to
+  [build a webhook receiver](/integrations/webhook-receiver).
+- **Sign in from ChatGPT and Claude.** MCP clients can now connect with OAuth
+  instead of an API key: add `https://api.emitkit.com/mcp`, sign in, pick a
+  Project and authorize. Manage connections in **Settings → Connected apps**.
+  See [Connect with OAuth](/integrations/oauth).

@@ -1,10 +1,16 @@
 import { apiKey } from "@better-auth/api-key";
+import { oauthProvider } from "@better-auth/oauth-provider";
 import type { TransactionalEmail } from "@server/email/template";
 import { devSignIn } from "@server/platform/dev-sign-in";
+import {
+  defaultResource,
+  nativeLoopbackClients,
+} from "@server/platform/oauth-clients";
 import type { SignupMethod } from "@server/telemetry/events";
+import { PROJECT_PICKED_HEADER } from "@shared/oauth";
 import type { BetterAuthOptions } from "better-auth";
 import { APIError } from "better-auth/api";
-import { emailOTP, organization } from "better-auth/plugins";
+import { emailOTP, jwt, organization } from "better-auth/plugins";
 import { createAccessControl } from "better-auth/plugins/access";
 import {
   adminAc,
@@ -12,6 +18,7 @@ import {
   memberAc,
   ownerAc,
 } from "better-auth/plugins/organization/access";
+import { Option, Schema } from "effect";
 
 /**
  * Everything Better Auth needs from the rest of the backend. Keeping this a
@@ -92,6 +99,8 @@ export type AuthEmail = TransactionalEmail;
 
 export interface AuthSettings {
   readonly appUrl: string;
+  /** The API host's origin; its `/mcp` is the OAuth protected resource. */
+  readonly apiUrl: string;
   readonly siteUrl: string | null;
   readonly allowSignup: boolean;
   /** Enables `POST /api/auth/dev/sign-in` ("Continue in local dev"). */
@@ -125,6 +134,30 @@ const OTP_EMAILS = {
   },
 } as const;
 
+/** The MCP endpoint as an OAuth protected resource (RFC 8707/9728). */
+export const mcpResource = (apiUrl: string) => `${apiUrl}/mcp`;
+
+/** `mcp` grants an agent the MCP tools and events of one Project; the rest are identity scopes. */
+export const MCP_SCOPE = "mcp";
+export const OAUTH_SCOPES = [
+  "openid",
+  "profile",
+  "email",
+  "offline_access",
+  MCP_SCOPE,
+] as const;
+
+/** Where the OAuth provider sends people to pick a project and approve an app. */
+const CONSENT_PAGE = "/oauth/consent";
+/** Access-token claim naming the project a grant acts on. */
+export const PROJECT_CLAIM = "project_id";
+
+const OAuthProjectSession = Schema.Struct({
+  oauthProjectId: Schema.NonEmptyString,
+});
+const decodeOAuthProjectSession =
+  Schema.decodeUnknownOption(OAuthProjectSession);
+
 /** Public API keys: `emitkit_` followed by 12 random letters. */
 export const API_KEY_PREFIX = "emitkit_";
 export const API_KEY_RATE_LIMIT = {
@@ -153,7 +186,16 @@ const ID_PREFIXES = new Map<string, string>([
   ["account", "acc"],
   ["apikey", "key"],
   ["invitation", "inv"],
+  ["jwks", "jwk"],
   ["member", "mbr"],
+  ["oauthAccessToken", "oat"],
+  ["oauthClient", "oac"],
+  ["oauthClientAssertion", "oca"],
+  ["oauthClientResource", "ocr"],
+  // A consent is an agent's grant to one project; its id is the MCP principal.
+  ["oauthConsent", "grant"],
+  ["oauthRefreshToken", "ort"],
+  ["oauthResource", "ores"],
   ["organization", "org"],
   ["rateLimit", "rl"],
   ["session", "sess"],
@@ -171,6 +213,7 @@ export const RESERVED_SLUGS = new Set([
   "assets",
   "auth",
   "getting-started",
+  "oauth",
   "rpc",
   "ui",
   "www",
@@ -295,6 +338,42 @@ export const authPlugins = (settings: AuthSettings, hooks: AuthHooks) =>
       storeOTP: "encrypted",
     }),
     devSignIn(settings.devSignIn),
+    // Signing keys for OAuth access tokens (`/api/auth/jwks`). Session JWTs
+    // aren't used, so no `set-auth-jwt` header on every session read.
+    jwt({ disableSettingJwtHeader: true }),
+    // OAuth 2.1 for MCP clients (ChatGPT, Claude): tokens are bound to the
+    // MCP endpoint. This is what `@better-auth/mcp` configures, which can't be
+    // used because it refuses the `http://api.localhost` resource of `pnpm dev`.
+    oauthProvider({
+      allowDynamicClientRegistration: true,
+      allowUnauthenticatedClientRegistration: true,
+      clientRegistrationDefaultResources: [mcpResource(settings.apiUrl)],
+      consentPage: CONSENT_PAGE,
+      // The project a token acts on is the consent's `referenceId`, picked on
+      // the consent screen (stored on the session by `oauth/select`) and
+      // carried into every access token, including refreshed ones.
+      customAccessTokenClaims: ({ referenceId }) =>
+        referenceId ? { [PROJECT_CLAIM]: referenceId } : {},
+      loginPage: "/auth/sign-in",
+      postLogin: {
+        consentReferenceId: ({ session }) =>
+          decodeOAuthProjectSession(session).pipe(
+            Option.map((value) => value.oauthProjectId),
+            Option.getOrUndefined
+          ),
+        // Every authorization shows the project picker, even for an app
+        // authorized before, except the consent screen's own continue right
+        // after the pick (without that, the provider would ask again).
+        page: CONSENT_PAGE,
+        shouldRedirect: ({ headers }) =>
+          headers?.get(PROJECT_PICKED_HEADER) !== "1",
+      },
+      refreshTokenReuseInterval: 30,
+      resources: [mcpResource(settings.apiUrl)],
+      scopes: [...OAUTH_SCOPES],
+    }),
+    nativeLoopbackClients(),
+    defaultResource(mcpResource(settings.apiUrl)),
   ] as const;
 
 export const makeAuthOptions = (
@@ -316,6 +395,8 @@ export const makeAuthOptions = (
       useSecureCookies: settings.appUrl.startsWith("https://"),
     },
     appName: "EmitKit",
+    // The JWT plugin's session-token endpoint; OAuth tokens come from /oauth2/token.
+    disabledPaths: ["/token"],
     basePath: "/api/auth",
     baseURL: settings.appUrl,
     databaseHooks: {
@@ -385,6 +466,11 @@ export const makeAuthOptions = (
       storage: "database",
     },
     session: {
+      // The project picked on the OAuth consent screen, read when the consent
+      // is recorded. Only `oauth/select` writes it, after checking the role.
+      additionalFields: {
+        oauthProjectId: { input: false, required: false, type: "string" },
+      },
       cookieCache: { enabled: false },
       expiresIn: 60 * 60 * 24 * 365,
       updateAge: 60 * 60 * 24,

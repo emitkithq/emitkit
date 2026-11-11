@@ -46,9 +46,9 @@ import {
 const EVENTS_PATH = "/v1/events";
 
 /**
- * Who is calling: resolved once from the credential (an API key), then
- * read by every operation. Scopes say what it may do; the project is where
- * its events go.
+ * Who is calling: resolved once from the credential (an API key, or on MCP
+ * an OAuth grant), then read by every operation. Scopes say what it may do;
+ * the project is where its events go.
  */
 export interface Principal {
   readonly organizationId: string;
@@ -56,8 +56,11 @@ export interface Principal {
   readonly projectId: string | null;
   readonly scopes: readonly Scope[];
   readonly rateLimit: RateLimitState;
-  readonly via: "api_key";
-  /** The credential's id: idempotency keys are kept per credential. */
+  readonly via: "api_key" | "oauth";
+  /**
+   * The credential's id (`key_…`, or the grant's `grant_…`): idempotency
+   * keys are kept per credential, and its own MCP Events skip its events.
+   */
   readonly credentialId: string;
 }
 
@@ -473,6 +476,7 @@ export class PublicApi extends Context.Service<
             .ingest(
               {
                 organizationId: principal.organizationId,
+                principalId: principal.credentialId,
                 projectId: principal.projectId,
               },
               event

@@ -30,9 +30,20 @@ export const FAQ_ITEMS: FaqItem[] = [
     question: "Is EmitKit an analytics or logging tool?",
   },
   {
-    answer: `Yes. Add the MCP server at ${MCP_ENDPOINT} to Claude, Cursor or any other MCP client, with an EmitKit API key as a bearer token. The agent gets createEvent, identifyUser and deleteIdentity tools, so it can tell you when a task is done, when it needs your approval or when it could not help a customer.`,
+    answer: `Yes. Add the MCP server at ${MCP_ENDPOINT} to Claude, Cursor or any other MCP client, and sign in or use an EmitKit API key as a bearer token. The agent gets createEvent, identifyUser and deleteIdentity tools, so it can tell you when a task is done, when it needs your approval or when it could not help a customer.`,
     id: "agents",
     question: "Can AI agents send events?",
+  },
+  {
+    answer:
+      "Yes, with MCP Events. Over MCP an agent subscribes to new events, filtered by channel, tag or user, and EmitKit posts each one to the agent's HTTPS endpoint as a signed webhook, so it can act straight away. Events an agent created itself are never sent back to it, so it can't loop.",
+    id: "agent-events",
+    question: "Can an agent react to events as they happen?",
+  },
+  {
+    answer: `Yes. Add ${MCP_ENDPOINT} as a connector in ChatGPT or Claude, or as an MCP server in Claude Code. You sign in to EmitKit, pick the project the app may use and authorize it, with no API key to copy. Owners and admins can connect apps, and you can revoke one at any time in Settings → Connected apps.`,
+    id: "chatgpt",
+    question: "Can I connect ChatGPT or Claude?",
   },
   {
     answer: `Send a POST request to ${EVENTS_ENDPOINT} with your API key in the Authorization header, call the @emitkit/js TypeScript SDK, or let an AI agent send it through the MCP server at ${MCP_ENDPOINT}. A channel is created the first time you name it.`,
@@ -53,7 +64,7 @@ export const FAQ_ITEMS: FaqItem[] = [
   },
   {
     answer:
-      "No. EmitKit delivers events to its own feed and as push notifications. There is no integration to configure and no shared chat channel to mute.",
+      "Not to Slack or Discord. EmitKit delivers events to its own feed and as push notifications, so there is no shared chat channel to mute. The one webhook is for agents: with MCP Events, an agent subscribes over MCP and receives new events at its HTTPS endpoint as signed webhooks.",
     id: "integrations",
     question: "Can EmitKit post to Slack, Discord or webhooks?",
   },

@@ -3,7 +3,11 @@ import { ForbiddenError, infrastructure } from "@server/errors";
 import type { InfrastructureError } from "@server/errors";
 import { Notifications } from "@server/notifications/notifications";
 import { Memberships } from "@server/organizations/memberships";
-import { makeAuthOptions } from "@server/platform/auth-options";
+import {
+  makeAuthOptions,
+  mcpResource,
+  PROJECT_CLAIM,
+} from "@server/platform/auth-options";
 import type { AuthOrganization, AuthUser } from "@server/platform/auth-options";
 import { CloudflareEnv } from "@server/platform/cloudflare";
 import { AppConfig } from "@server/platform/config";
@@ -18,15 +22,37 @@ import type { SignupMethod } from "@server/telemetry/events";
 import { scopesFrom } from "@shared/scopes";
 import type { Scope } from "@shared/scopes";
 import { betterAuth } from "better-auth";
-import { Context, Effect, Layer, Redacted, Schema } from "effect";
+import { verifyJwsAccessToken } from "better-auth/oauth2";
+import { Context, Effect, Layer, Option, Redacted, Schema } from "effect";
 import { D1Dialect } from "kysely-d1";
 
 export interface SessionInfo {
+  readonly sessionId: string;
   readonly userId: string;
   readonly email: string;
   readonly name: string;
   readonly activeOrganizationId: string | null;
 }
+
+/** A verified OAuth access token for the MCP endpoint. */
+export interface AccessTokenClaims {
+  readonly userId: string;
+  readonly clientId: string;
+  readonly issuedAtSeconds: number;
+  /** The project the grant acts on (the consent's `referenceId`). */
+  readonly projectId: string | null;
+  readonly scopes: readonly string[];
+}
+
+const AccessTokenPayload = Schema.Struct({
+  [PROJECT_CLAIM]: Schema.optional(Schema.String),
+  azp: Schema.String,
+  iat: Schema.Number,
+  // Sender-constrained (DPoP) tokens need a proof this endpoint doesn't check.
+  cnf: Schema.optional(Schema.Undefined),
+  scope: Schema.optional(Schema.String),
+  sub: Schema.String,
+});
 
 export interface IssuedApiKey {
   readonly id: string;
@@ -161,6 +187,17 @@ export class Auth extends Context.Service<
     readonly verifyApiKey: (
       key: string
     ) => Effect.Effect<ApiKeyVerdict, InfrastructureError>;
+    /**
+     * Checks an OAuth access token's signature, issuer, expiry and audience
+     * (the MCP endpoint). Null when any of them is wrong; a failed signing
+     * key lookup is an InfrastructureError, not a bad token. It doesn't check
+     * that the grant is still live; `OAuthGrants.resolve` does.
+     */
+    readonly verifyAccessToken: (
+      token: string
+    ) => Effect.Effect<AccessTokenClaims | null, InfrastructureError>;
+    /** The OAuth issuer (`<app>/api/auth`), as tokens and metadata carry it. */
+    readonly issuer: string;
   }
 >()("emitkit/platform/Auth") {
   static readonly layer = Layer.effect(
@@ -181,6 +218,7 @@ export class Auth extends Context.Service<
         makeAuthOptions(
           {
             allowSignup: config.allowSignup,
+            apiUrl: config.apiUrl,
             appUrl: config.appUrl,
             // `import.meta.env.DEV` is `false` in every build, so production
             // bundles never enable it; the host check guards odd dev setups.
@@ -362,6 +400,7 @@ export class Auth extends Context.Service<
           activeOrganizationId: result.session.activeOrganizationId ?? null,
           email: result.user.email,
           name: result.user.name,
+          sessionId: result.session.id,
           userId: result.user.id,
         };
       });
@@ -480,11 +519,64 @@ export class Auth extends Context.Service<
         } satisfies ApiKeyVerdict;
       });
 
+      const issuer = authContext.baseURL;
+      const audience = mcpResource(config.apiUrl);
+      // Keys come from the database in-process: a Worker can't fetch its own
+      // hostname for `/api/auth/jwks`. Cached per isolate by this key object.
+      const jwksCacheKey = {};
+      const decodePayload = Schema.decodeUnknownOption(AccessTokenPayload);
+
+      const verifyAccessToken = Effect.fn("Auth.verifyAccessToken")(function* (
+        token: string
+      ) {
+        // The provider throws for a bad token and for a failed key lookup
+        // alike; only the lookup is our failure (a 500, not a 401).
+        const lookup = { failed: false };
+        const payload = yield* Effect.tryPromise({
+          catch: (cause) => ({ cause, lookupFailed: lookup.failed }),
+          try: () =>
+            verifyJwsAccessToken(token, {
+              jwksCacheKey,
+              jwksFetch: () => {
+                const pending = auth.api.getJwks();
+                pending.catch(() => {
+                  lookup.failed = true;
+                });
+                return pending;
+              },
+              verifyOptions: { audience, issuer },
+            }),
+        }).pipe(
+          Effect.map(Option.some),
+          Effect.catch((error) =>
+            error.lookupFailed
+              ? Effect.fail(infrastructure("auth.jwks")(error.cause))
+              : Effect.succeedNone
+          )
+        );
+        const claims = Option.isSome(payload)
+          ? decodePayload(payload.value)
+          : Option.none();
+        if (Option.isNone(claims)) {
+          return null;
+        }
+        const { azp, iat, scope, sub } = claims.value;
+        return {
+          clientId: azp,
+          issuedAtSeconds: iat,
+          projectId: claims.value[PROJECT_CLAIM] ?? null,
+          scopes: (scope ?? "").split(" ").filter((part) => part.length > 0),
+          userId: sub,
+        } satisfies AccessTokenClaims;
+      });
+
       return Auth.of({
         createOrganization,
         handle,
         issueApiKey,
+        issuer,
         session,
+        verifyAccessToken,
         verifyApiKey,
       });
     })

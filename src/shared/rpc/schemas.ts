@@ -291,6 +291,39 @@ export const PushSettings = Schema.Struct({
 });
 export type PushSettings = typeof PushSettings.Type;
 
+/** A project an app can be connected to, on the OAuth consent screen. */
+export const OAuthProjectChoice = Schema.Struct({
+  id: Schema.String,
+  name: Schema.String,
+});
+
+export const OAuthOrganizationChoice = Schema.Struct({
+  /** Owners and admins only: a grant writes events and erases users. */
+  canConnect: Schema.Boolean,
+  id: Schema.String,
+  name: Schema.String,
+  projects: Schema.Array(OAuthProjectChoice),
+});
+export type OAuthOrganizationChoice = typeof OAuthOrganizationChoice.Type;
+
+export const OAuthChoices = Schema.Struct({
+  organizations: Schema.Array(OAuthOrganizationChoice),
+});
+export type OAuthChoices = typeof OAuthChoices.Type;
+
+/** An app the signed-in user connected over OAuth (Settings → Connected apps). */
+export const OAuthConnection = Schema.Struct({
+  clientName: Schema.String,
+  connectedAt: Schema.String,
+  id: Schema.String,
+  organizationName: NullableString,
+  /** Null once the project is deleted. */
+  projectName: NullableString,
+  redirectHosts: Schema.Array(Schema.String),
+});
+export type OAuthConnection = typeof OAuthConnection.Type;
+
+export const OAuthSelection = Schema.Struct({ projectId: Id });
 const Endpoint = Schema.String.check(
   Schema.isMinLength(1),
   Schema.isMaxLength(2048)

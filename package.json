@@ -33,6 +33,7 @@
     "@better-auth-ui/heroui": "1.7.26",
     "@better-auth-ui/react": "1.7.26",
     "@better-auth/api-key": "1.7.5",
+    "@better-auth/oauth-provider": "1.7.5",
     "@better-auth/passkey": "1.7.5",
     "@effect/sql-d1": "4.0.0-rc.117",
     "@emitkit/js": "3.0.0",
